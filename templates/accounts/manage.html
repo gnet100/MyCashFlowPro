@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}ניהול חשבונות - ניהול כספים{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-title {
+    color: #333;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #4a90e2;
+}
+
+.stat-card .stat-subtitle {
+    font-size: 0.85rem;
+    color: #999;
+    margin-top: 0.25rem;
+}
+
+.accounts-table {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.accounts-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.accounts-table th {
+    background: #4a90e2;
+    color: white;
+    padding: 1rem;
+    text-align: right;
+    font-weight: 600;
+}
+
+.accounts-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.accounts-table tr:hover {
+    background: #f8f9fa;
+}
+
+.account-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.account-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.account-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.account-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.account-type.bank {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.account-type.credit {
+    background: #fff3cd;
+    color: #664d03;
+}
+
+.balance-positive {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.balance-negative {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.balance-zero {
+    color: #999;
+}
+
+.btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #4a90e2;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #357abd;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #999;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">ניהול חשבונות 🏦</h1>
+    <button class="btn btn-primary" onclick="alert('יצירת חשבון חדש - בפיתוח')">
+        ➕ חשבון חדש
+    </button>
+</div>
+
+<!-- סטטיסטיקות -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>סה"כ חשבונות</h3>
+        <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>חשבונות פעילים</h3>
+        <div class="stat-value">{{ stats.active }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>חשבונות בנק</h3>
+        <div class="stat-value">{{ stats.bank_accounts }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>כרטיסי אשראי</h3>
+        <div class="stat-value">{{ stats.credit_cards }}</div>
+    </div>
+    <div class="stat-card">
+        <h3>יתרה כוללת</h3>
+        <div class="stat-value">₪{{ "{:,.2f}".format(stats.total_balance) }}</div>
+        <div class="stat-subtitle">חשבונות פעילים</div>
+    </div>
+</div>
+
+<!-- טבלת חשבונות -->
+<div class="accounts-table">
+    {% if accounts %}
+    <table>
+        <thead>
+            <tr>
+                <th>שם חשבון</th>
+                <th>מספר חשבון</th>
+                <th>סוג</th>
+                <th>בנק</th>
+                <th>תזרים</th>
+                <th>יתרה נוכחית</th>
+                <th>עסקאות</th>
+                <th>סטטוס</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in accounts %}
+            <tr>
+                <td><strong>{{ account.name }}</strong></td>
+                <td>{{ account.account_number or '-' }}</td>
+                <td>
+                    {% if account.account_type == 'bank' %}
+                    <span class="account-type bank">🏦 חשבון בנק</span>
+                    {% elif account.account_type == 'credit' %}
+                    <span class="account-type credit">💳 כרטיס אשראי</span>
+                    {% else %}
+                    <span class="account-type">{{ account.account_type }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ account.bank_name or '-' }}</td>
+                <td>{{ account.flow_name }}</td>
+                <td>
+                    {% if account.current_balance > 0 %}
+                    <span class="balance-positive">₪{{ "{:,.2f}".format(account.current_balance) }}</span>
+                    {% elif account.current_balance < 0 %}
+                    <span class="balance-negative">₪{{ "{:,.2f}".format(account.current_balance) }}</span>
+                    {% else %}
+                    <span class="balance-zero">₪0.00</span>
+                    {% endif %}
+                </td>
+                <td>{{ account.transactions_count }}</td>
+                <td>
+                    {% if account.is_active %}
+                    <span class="account-badge active">✓ פעיל</span>
+                    {% else %}
+                    <span class="account-badge inactive">✗ לא פעיל</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">💳</div>
+        <p><strong>אין חשבונות במערכת</strong></p>
+        <p>צור חשבון חדש כדי להתחיל</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

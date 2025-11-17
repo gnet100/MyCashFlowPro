@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}דף הבית - ניהול כספים{% endblock %}
+
+{% block extra_css %}
+<style>
+/* דריסת סגנונות גלובליים לתזרימים */
+.flows-section {
+    padding: 1rem !important; /* הקטנת padding ל-50% */
+    margin: 1rem 0 !important;
+}
+
+/* טבלת תזרימים */
+.flows-table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 1rem !important;
+    padding: 0 !important; /* הסרת padding פנימי */
+}
+
+.flows-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 !important;
+}
+
+.flows-table tbody {
+    display: block;
+}
+
+.flows-table .flow-row {
+    border-bottom: 1px solid #E0E0E0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 28px !important; /* הקטנה ל-80% */
+    line-height: 28px !important;
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.flows-table .flow-row:hover {
+    background-color: #F8F9FA;
+}
+
+.flows-table .flow-row.active {
+    background-color: #E3F2FD;
+}
+
+.flows-table .flow-radio-cell {
+    width: 40px;
+    text-align: center;
+    padding: 0.2rem !important;
+}
+
+.flows-table .flow-radio-cell input[type="radio"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.flows-table .flow-info-cell {
+    padding: 0.2rem 0.8rem !important;
+    width: 50%; /* רוחב קבוע */
+}
+
+.flows-table .flow-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+    display: inline-block;
+    width: 120px; /* רוחב קבוע לשם */
+    margin-left: 0.5rem;
+}
+
+.flows-table .flow-description {
+    color: #6C757D;
+    font-size: 0.8rem;
+    display: inline;
+}
+
+.flows-table .flow-stats-cell {
+    padding: 0.2rem 0.8rem !important;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.flows-table .flow-stat {
+    display: inline-block;
+    margin-left: 1rem;
+    font-size: 0.8rem;
+    color: #6C757D;
+}
+
+.flows-table .flow-stat:first-child {
+    margin-left: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-page">
+    <h2>מערכת ניהול כספים</h2>
+    
+    {% if error %}
+    <div class="alert alert-error">
+        <strong>שגיאה:</strong> {{ error }}
+    </div>
+    {% endif %}
+    
+    <!-- סטטיסטיקות כלליות -->
+    <h3>סטטיסטיקות כלליות</h3>
+    
+    <div class="stats-grid-compact">
+        <div class="stat-card-compact">
+            <div class="stat-number">{{ stats.transactions if stats else 0 }}</div>
+            <div class="stat-label">רשומות</div>
+        </div>
+        
+        <div class="stat-card-compact">
+            <div class="stat-number">{{ stats.categories if stats else 0 }}</div>
+            <div class="stat-label">קטגוריות</div>
+        </div>
+        
+        <div class="stat-card-compact">
+            <div class="stat-number">{{ stats.flows if stats else 0 }}</div>
+            <div class="stat-label">תזרימים</div>
+        </div>
+        
+        <div class="stat-card-compact">
+            <div class="stat-number">{{ stats.accounts if stats else 0 }}</div>
+            <div class="stat-label">חשבונות</div>
+        </div>
+        
+        <div class="stat-card-compact">
+            <div class="stat-number">{{ stats.files if stats else 0 }}</div>
+            <div class="stat-label">קבצים</div>
+        </div>
+        
+        <div class="stat-card-compact {% if stats and stats.uncategorized > 0 %}warning{% endif %}">
+            <div class="stat-number">{{ stats.uncategorized if stats else 0 }}</div>
+            <div class="stat-label">לא מסווג</div>
+        </div>
+    </div>
+
+    <!-- תזרימי כספים -->
+    <div class="flows-section">
+        <h3>תזרימי כספים</h3>
+        
+        <div class="flows-table-container">
+            {% if flows and flows|length > 0 %}
+            <table class="flows-table">
+                <tbody>
+                    {% for flow in flows %}
+                    <tr class="flow-row {% if flow.id == active_flow_id %}active{% endif %}" onclick="switchFlow({{ flow.id }})">
+                        <td class="flow-radio-cell">
+                            <input type="radio" name="active_flow" value="{{ flow.id }}" 
+                                   {% if flow.id == active_flow_id %}checked{% endif %}>
+                        </td>
+                        <td class="flow-info-cell">
+                            <span class="flow-name">{{ flow.name }}</span>
+                            {% if flow.description %}
+                            <span class="flow-description">{{ flow.description }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="flow-stats-cell">
+                            {% if flow.stats %}
+                            <span class="flow-stat">חשבונות: {{ flow.stats.accounts }}</span>
+                            <span class="flow-stat">רשומות: {{ flow.stats.transactions }}</span>
+                            <span class="flow-stat">קבצים: {{ flow.stats.files }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="no-data">אין תזרימים במערכת</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- דפים במערכת -->
+    <h3>דפים במערכת</h3>
+    
+    <div class="pages-grid">
+        <a href="/files" class="page-card">
+            <div class="page-icon">📋</div>
+            <div class="page-content">
+                <h4>ניהול קבצים</h4>
+                <p>העלאה וניהול קבצי בנקים וכרטיסי אשראי</p>
+            </div>
+        </a>
+        
+        <a href="/accounts" class="page-card">
+            <div class="page-icon">💳</div>
+            <div class="page-content">
+                <h4>חשבונות וכרטיסים</h4>
+                <p>ניהול חשבונות בנק וכרטיסי אשראי</p>
+            </div>
+        </a>
+        
+        <a href="/flows" class="page-card">
+            <div class="page-icon">🔄</div>
+            <div class="page-content">
+                <h4>תזרימי כספים</h4>
+                <p>ניהול תזרימים נפרדים (בית, עסק, השקעות)</p>
+            </div>
+        </a>
+        
+        <a href="/categories" class="page-card">
+            <div class="page-icon">🗂️</div>
+            <div class="page-content">
+                <h4>ניהול קטגוריות</h4>
+                <p>יצירה ועריכה של קטגוריות בהיררכיה (3 רמות)</p>
+            </div>
+        </a>
+        
+        <a href="/transactions" class="page-card">
+            <div class="page-icon">📊</div>
+            <div class="page-content">
+                <h4>מסד רשומות</h4>
+                <p>צפייה, עריכה וסינון של כל הרשומות הפיננסיות</p>
+            </div>
+        </a>
+        
+        <a href="/database" class="page-card">
+            <div class="page-icon">🗄️</div>
+            <div class="page-content">
+                <h4>טבלאות DB</h4>
+                <p>צפייה בכל הטבלאות ותוכן מסד הנתונים</p>
+            </div>
+        </a>
+        
+        <div class="page-card disabled">
+            <div class="page-icon">📈</div>
+            <div class="page-content">
+                <h4>דוחות וניתוחים</h4>
+                <p class="coming-soon">בקרוב - דוחות גרפיים וניתוחים סטטיסטיים</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- נתוני דוגמה -->
+    <div class="demo-data-section">
+        {% if stats and stats.transactions > 0 %}
+        <div class="alert alert-success">
+            ✅ יש לך {{ stats.transactions }} רשומות במערכת!
+        </div>
+        {% else %}
+        <div class="demo-data-box">
+            <h4>🎯 רוצה לראות את המערכת בפעולה?</h4>
+            <p>טען נתוני דוגמה: קטגוריות, חשבונות ורשומות לבדיקה</p>
+            <a href="/load-mock-data" class="btn btn-primary">
+                📊 טען נתוני דוגמה
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- מילסטונים -->
+    <div class="milestones-section">
+        <h3>🚀 מצב הפרויקט</h3>
+        <ul class="milestones-list">
+            <li class="completed">✅ Milestone 1 - תשתית בסיסית</li>
+            <li class="completed">✅ Milestone 2 - נתוני דוגמה ורשומות</li>
+            <li class="in-progress">🔄 Milestone 3 - מערכת קטגוריות</li>
+            <li class="pending">⏳ Milestone 4 - למידה אוטומטית</li>
+            <li class="pending">⏳ Milestone 5 - דוחות וניתוחים</li>
+        </ul>
+    </div>
+
+    <!-- תהליך התחברות והפעלה -->
+    <div class="connection-section">
+        <h3>🔧 תהליך התחברות למערכת</h3>
+        
+        <div class="connection-steps">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>התקנת Python</h4>
+                    <p>ודא שיש לך Python 3.8+ מותקן</p>
+                    <code>python --version</code>
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>התקנת ספריות</h4>
+                    <p>התקן את Flask והספריות הנדרשות</p>
+                    <code>pip install -r requirements.txt</code>
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>הפעלת השרת</h4>
+                    <p>הרץ את השרת בפורט 5000</p>
+                    <code>python app.py</code>
+                </div>
+            </div>
+            
+            <div class="step-card">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>גישה למערכת</h4>
+                    <p>פתח דפדפן וגלוש ל:</p>
+                    <code>http://localhost:5000</code>
+                </div>
+            </div>
+        </div>
+        
+        <div class="api-info">
+            <h4>🔌 API Endpoints זמינים:</h4>
+            <ul class="api-list">
+                <li><code>GET /</code> - דף הבית</li>
+                <li><code>GET /api/stats</code> - סטטיסטיקות מערכת</li>
+                <li><code>GET /health</code> - בדיקת בריאות</li>
+                <li><code>GET /transactions</code> - רשימת רשומות</li>
+                <li><code>GET /database</code> - טבלאות DB</li>
+                <li><code>GET /load-mock-data</code> - טעינת נתוני דוגמה</li>
+            </ul>
+            
+            <button onclick="testAPI()" class="btn btn-primary api-test-btn">
+                🧪 בדוק חיבור ל-API
+            </button>
+            <div id="api-result"></div>
+        </div>
+    </div>
+    
+    <!-- הליך התחברות למערכת -->
+    <div class="connection-guide" style="margin-top: 3rem;">
+        <div class="collapsible-header" onclick="toggleConnectionGuide()">
+            <h3 style="margin: 0; display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <span>📖 הליך התחברות והפעלת המערכת</span>
+                <span id="guide-arrow" style="font-size: 1.2rem;">▼</span>
+            </h3>
+        </div>
+        
+        <div id="connection-guide-content" class="collapsible-content" style="display: none;">
+            <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; margin-top: 1rem;">
+                
+                <!-- התחברות ממחשב חדש -->
+                <div class="guide-section">
+                    <h4 style="color: #4A90E2; margin-top: 0;">🖥️ התקנה והפעלה ראשונית במחשב חדש</h4>
+                    
+                    <h5>שלב 1: הורדת הקבצים</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>הורד את הקובץ: <code>financial-manager-M3-P1-COMPLETE-WITH-DOCS.zip</code></li>
+                        <li>חלץ את הקבצים למיקום קבוע, למשל: <code>C:\Users\[שם_משתמש]\Documents\financial-manager</code></li>
+                    </ol>
+                    
+                    <h5>שלב 2: התקנת Python (אם לא מותקן)</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>גש לאתר: <a href="https://www.python.org/downloads/" target="_blank">https://www.python.org/downloads/</a></li>
+                        <li>הורד את Python 3.8 ומעלה (מומלץ: Python 3.11 או 3.12)</li>
+                        <li><strong>חשוב מאוד:</strong> במהלך ההתקנה, סמן את האפשרות <code>Add Python to PATH</code></li>
+                        <li>לחץ "Install Now" והמתן להתקנה</li>
+                        <li>לאחר ההתקנה, פתח PowerShell או CMD ובדוק: <code>python --version</code></li>
+                    </ol>
+                    
+                    <h5>שלב 3: התקנת תלויות</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>פתח PowerShell או CMD</li>
+                        <li>נווט לתיקיית המערכת: <code>cd C:\Users\[שם_משתמש]\Documents\financial-manager</code></li>
+                        <li>התקן את התלויות: <code>pip install -r requirements.txt</code></li>
+                        <li>במידה ויש שגיאת הרשאות, הוסף <code>--user</code>: <code>pip install --user -r requirements.txt</code></li>
+                    </ol>
+                    
+                    <h5>שלב 4: הפעלה ראשונה</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>וודא שאתה בתיקיית המערכת</li>
+                        <li>הרץ את השרת:
+                            <ul>
+                                <li><strong>Windows:</strong> לחיצה כפולה על <code>start_simple.bat</code></li>
+                                <li><strong>או ידנית:</strong> <code>python app.py</code></li>
+                            </ul>
+                        </li>
+                        <li>אמור להופיע הודעה: "Running on http://127.0.0.1:5000"</li>
+                        <li>פתח דפדפן ונווט ל: <code>http://localhost:5000</code></li>
+                        <li><strong>טען נתוני דוגמה:</strong> לחץ על "📊 טען נתוני דוגמה" כדי להתחיל לעבוד עם המערכת</li>
+                    </ol>
+                </div>
+                
+                <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+                
+                <!-- הפעלה רגילה -->
+                <div class="guide-section">
+                    <h4 style="color: #28A745; margin-top: 0;">🚀 הפעלה רגילה (מערכת מותקנת)</h4>
+                    
+                    <h5>דרך 1: הפעלה מהירה (Windows)</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>נווט לתיקיית המערכת ב-File Explorer</li>
+                        <li>לחיצה כפולה על הקובץ: <code>start_simple.bat</code></li>
+                        <li>חלון טרמינל שחור ייפתח - <strong>אל תסגור אותו!</strong></li>
+                        <li>כשתראה "Running on http://127.0.0.1:5000" - המערכת רצה</li>
+                        <li>פתח דפדפן ב: <code>http://localhost:5000</code></li>
+                    </ol>
+                    
+                    <h5>דרך 2: הפעלה דרך PowerShell</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>פתח PowerShell</li>
+                        <li>נווט לתיקייה: <code>cd C:\Users\[שם_משתמש]\Documents\financial-manager</code></li>
+                        <li>הרץ: <code>.\start_simple.bat</code> או <code>python app.py</code></li>
+                        <li>פתח דפדפן ב: <code>http://localhost:5000</code></li>
+                    </ol>
+                    
+                    <h5>דרך 3: הפעלה דרך CMD</h5>
+                    <ol style="line-height: 1.8;">
+                        <li>לחץ <code>Win + R</code></li>
+                        <li>הקלד: <code>cmd</code> ולחץ Enter</li>
+                        <li>נווט לתיקייה: <code>cd C:\Users\[שם_משתמש]\Documents\financial-manager</code></li>
+                        <li>הרץ: <code>python app.py</code></li>
+                        <li>פתח דפדפן ב: <code>http://localhost:5000</code></li>
+                    </ol>
+                </div>
+                
+                <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+                
+                <!-- פתרון בעיות -->
+                <div class="guide-section">
+                    <h4 style="color: #DC3545; margin-top: 0;">🐛 פתרון בעיות נפוצות</h4>
+                    
+                    <h5>בעיה: "Python was not found"</h5>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>פתרון 1:</strong> התקן Python (ראה למעלה) וודא שסימנת "Add to PATH"</li>
+                        <li><strong>פתרון 2:</strong> הרץ עם נתיב מלא: <code>C:\Python311\python.exe app.py</code></li>
+                        <li><strong>פתרון 3:</strong> הפעל מחדש את המחשב אחרי התקנת Python</li>
+                    </ul>
+                    
+                    <h5>בעיה: "Port 5000 is already in use"</h5>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>פתרון 1:</strong> סגור תוכניות אחרות שעשויות להשתמש בPort 5000</li>
+                        <li><strong>פתרון 2:</strong> ערוך את <code>app.py</code> ושנה את השורה האחרונה ל: <code>app.run(debug=True, port=5001)</code></li>
+                        <li><strong>פתרון 3:</strong> הרוג את התהליך הקודם:
+                            <ul>
+                                <li>Windows: <code>taskkill /F /IM python.exe</code></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    
+                    <h5>בעיה: "ModuleNotFoundError: No module named 'flask'"</h5>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>פתרון:</strong> התקן תלויות: <code>pip install -r requirements.txt</code></li>
+                        <li>אם לא עובד: <code>pip install Flask==3.0.0</code></li>
+                    </ul>
+                    
+                    <h5>בעיה: הדפדפן לא פותח את המערכת</h5>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>פתרון 1:</strong> נסה <code>http://127.0.0.1:5000</code> במקום localhost</li>
+                        <li><strong>פתרון 2:</strong> בדוק חומת אש (Firewall) - אשר גישה לPython</li>
+                        <li><strong>פתרון 3:</strong> נסה דפדפן אחר (Chrome, Firefox, Edge)</li>
+                    </ul>
+                    
+                    <h5>בעיה: השרת נעצר לפתע</h5>
+                    <ul style="line-height: 1.8;">
+                        <li>בדוק הודעות שגיאה בטרמינל</li>
+                        <li>ודא שלא סגרת את החלון השחור בטעות</li>
+                        <li>הפעל מחדש: <code>python app.py</code></li>
+                    </ul>
+                </div>
+                
+                <hr style="margin: 2rem 0; border: none; border-top: 1px solid #ddd;">
+                
+                <!-- מידע חשוב -->
+                <div class="guide-section">
+                    <h4 style="color: #FFC107; margin-top: 0;">⚠️ מידע חשוב</h4>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>אל תסגור את החלון השחור (טרמינל)</strong> - זה השרת שמריץ את המערכת!</li>
+                        <li><strong>מיקום מסד הנתונים:</strong> <code>data\financial.db</code> - אל תמחק קובץ זה!</li>
+                        <li><strong>גיבוי:</strong> מומלץ לגבות את הקובץ <code>financial.db</code> מדי פעם</li>
+                        <li><strong>עצירת השרת:</strong> לחץ <code>Ctrl + C</code> בחלון השחור</li>
+                        <li><strong>נתיבי מערכת חשובים:</strong>
+                            <ul>
+                                <li>תיקיית המערכת: המיקום שבו חילצת את הקבצים</li>
+                                <li>Python: נמצא בדרך כלל ב-<code>C:\Python311\</code> או <code>C:\Users\[שם]\AppData\Local\Programs\Python\</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>מסמכי עזרה:</strong> קרא את <code>README.md</code> ו-<code>NEXT-SESSION-GUIDE.md</code></li>
+                    </ul>
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 1rem; border-radius: 4px; margin-top: 2rem;">
+                    <strong>💡 טיפ:</strong> שמור את הקישור <code>http://localhost:5000</code> בסימניות הדפדפן לגישה מהירה!
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleConnectionGuide() {
+    const content = document.getElementById('connection-guide-content');
+    const arrow = document.getElementById('guide-arrow');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+
+function testAPI() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('api-result').innerHTML = `
+                <div class="alert alert-success" style="margin-top: 1rem;">
+                    ✅ API עובד!<br>
+                    מספר טבלאות: ${data.tables}<br>
+                    גודל DB: ${(data.db_size / 1024).toFixed(2)} KB
+                </div>
+            `;
+        })
+        .catch(error => {
+            document.getElementById('api-result').innerHTML = `
+                <div class="alert alert-error" style="margin-top: 1rem;">
+                    ❌ שגיאה: ${error}
+                </div>
+            `;
+        });
+}
+
+function switchFlow(flowId) {
+    // שמירת התזרים הפעיל ב-localStorage
+    localStorage.setItem('activeFlowId', flowId);
+    
+    // רענון הדף
+    window.location.reload();
+}
+
+// טעינת תזרים פעיל מ-localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const savedFlowId = localStorage.getItem('activeFlowId');
+    if (savedFlowId) {
+        const radioButton = document.querySelector(`input[value="${savedFlowId}"]`);
+        if (radioButton) {
+            radioButton.checked = true;
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,815 @@
+{% extends "base.html" %}
+
+{% block title %}ניהול קבצים | MyCashFlow Pro{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* משתנים מרכזיים לגבהים */
+    :root {
+        --input-height: 36px;
+        --button-height: 28px;  /* גובה כפתורים כמו בדף קטגוריות */
+        --section-padding: 0.8rem;
+    }
+    
+    /* טפסים קומפקטיים */
+    .compact-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+    }
+    
+    .compact-form .form-row {
+        display: flex;
+        gap: 0.6rem;
+        width: 100%;
+        align-items: center;
+    }
+    
+    .compact-form .form-field {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .compact-form input,
+    .compact-form select {
+        width: 100%;
+        height: var(--input-height);
+        padding: 0 0.5rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--border-radius);
+        font-size: 0.9rem;
+        line-height: 1.2;
+        box-sizing: border-box;
+    }
+    
+    .compact-form input[type="file"] {
+        cursor: pointer;
+        padding: 0.4rem 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    /* כפתורים קטנים - גובה אחיד כמו בדף קטגוריות */
+    .btn-compact {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        border: none;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    /* תיבות מקטעים - גובה מופחת */
+    .flows-section {
+        padding: var(--section-padding);
+    }
+    
+    .flows-section h3 {
+        font-size: 1.1rem;
+        margin: 0 0 0.6rem 0;
+    }
+    
+    /* פאנל סינון - כמו בדף רשומות */
+    .filter-panel {
+        background: var(--white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    
+    .filter-header {
+        padding: 0.8rem 1.2rem;
+        background: var(--light-gray);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.2s;
+    }
+    
+    .filter-header:hover {
+        background: var(--medium-gray);
+    }
+    
+    .filter-header h4 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+    }
+    
+    .filter-toggle-icon {
+        font-size: 1rem;
+        color: var(--secondary-color);
+        transition: transform 0.3s;
+    }
+    
+    .filter-toggle-icon.open {
+        transform: rotate(180deg);
+    }
+    
+    .filter-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+    }
+    
+    .filter-content.open {
+        max-height: 400px;
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        padding: 1.2rem;
+    }
+    
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-field label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin-bottom: 0.4rem;
+    }
+    
+    .filter-field input,
+    .filter-field select {
+        height: var(--input-height);
+        padding: 0 0.5rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: var(--border-radius);
+        font-size: 0.9rem;
+    }
+    
+    .filter-field input:focus,
+    .filter-field select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0 1.2rem 1.2rem;
+        justify-content: flex-end; /* כפתורים בצד שמאל (סוף השורה ב-RTL) */
+    }
+    
+    .filter-btn {
+        padding: 0.4rem 1rem;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .filter-btn-primary {
+        background: #7092BE;
+        color: var(--white);
+    }
+    
+    .filter-btn-primary:hover {
+        background: #5D799E;
+    }
+    
+    .filter-btn-success {
+        background: #28A745;
+        color: var(--white);
+    }
+    
+    .filter-btn-success:hover {
+        background: #218838;
+    }
+    
+    .filter-btn-success:disabled {
+        background: #28A745;
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    
+    .filter-btn-success:disabled:hover {
+        background: #28A745;
+    }
+    
+    .filter-btn-secondary {
+        background: var(--light-gray);
+        color: var(--dark-gray);
+    }
+    
+    .filter-btn-secondary:hover {
+        background: var(--medium-gray);
+    }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>ניהול קבצים</h2>
+</div>
+
+<div id="messageArea"></div>
+
+<!-- אזור העלאה - 1/3 ו-2/3 -->
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+    <!-- העלאת קובץ -->
+    <div class="flows-section">
+        <h3>העלאת קובץ</h3>
+        <form id="uploadForm" class="compact-form" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-field">
+                    <input type="file" id="file" name="file" accept=".xlsx,.xls,.csv,.tsv,.pdf,.dat" title="Excel, PDF, CSV, TSV, DAT | מקסימום: 50MB" placeholder="Excel, PDF, CSV, TSV, DAT | מקסימום: 50MB" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field" style="max-width: 40%;">
+                    <select id="flow_id" name="flow_id" required>
+                        <option value="">תזרים</option>
+                        {% for flow in flows %}
+                            {% if flow.id != 0 %}
+                                <option value="{{ flow.id }}">{{ flow.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div style="flex: 1;"></div>
+                <button type="submit" class="btn btn-primary btn-compact" id="uploadBtn">שמור</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- הזנה ידנית -->
+    <div class="flows-section">
+        <h3>הזנה ידנית</h3>
+        <form id="manualForm" class="compact-form">
+            <div class="form-row">
+                <div class="form-field">
+                    <input type="date" id="manual_date" name="date" required>
+                </div>
+                <div class="form-field">
+                    <input type="number" id="manual_amount" name="amount" step="0.01" placeholder="סכום" required>
+                </div>
+                <div class="form-field" style="flex: 2;">
+                    <input type="text" id="manual_description" name="description" placeholder="תיאור" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <select id="manual_flow_id" name="flow_id" required onchange="loadCategories()">
+                        <option value="">תזרים</option>
+                        {% for flow in flows %}
+                            {% if flow.id != 0 %}
+                                <option value="{{ flow.id }}">{{ flow.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <select id="manual_category_id" name="category_id" required disabled>
+                        <option value="">קטגוריה</option>
+                    </select>
+                </div>
+                <div class="form-field" style="flex: 2;">
+                    <input type="text" id="manual_notes" name="notes" placeholder="הערה">
+                </div>
+            </div>
+            <div class="form-row">
+                <div style="flex: 1;"></div>
+                <button type="submit" class="btn btn-primary btn-compact" id="manualBtn">שמור</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- טבלת קבצים -->
+<div class="flows-section">
+    <h3>קבצים ({{ files|length }})</h3>
+    
+    <!-- פאנל סינון -->
+    <div class="filter-panel" id="filterPanel" onmouseleave="closeFilterPanel()">
+        <div class="filter-header" onclick="toggleFilterPanel()">
+            <h4>🔍 סינון תצוגה</h4>
+            <span class="filter-toggle-icon" id="filterToggle">▼</span>
+        </div>
+        <div class="filter-content" id="filterContent">
+            <div class="filter-grid">
+                <div class="filter-field">
+                    <label>מתאריך</label>
+                    <input type="date" id="filterDateFrom">
+                </div>
+                <div class="filter-field">
+                    <label>עד תאריך</label>
+                    <input type="date" id="filterDateTo">
+                </div>
+                <div class="filter-field">
+                    <label>תזרים</label>
+                    <select id="filterFlow">
+                        <option value="">כל התזרימים</option>
+                        {% for flow in flows %}
+                            {% if flow.id != 0 %}
+                                <option value="{{ flow.id }}">{{ flow.name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>מסכום</label>
+                    <input type="number" id="filterAmountFrom" placeholder="0" step="0.01">
+                </div>
+                <div class="filter-field">
+                    <label>עד סכום</label>
+                    <input type="number" id="filterAmountTo" placeholder="999999" step="0.01">
+                </div>
+                <div class="filter-field">
+                    <label>סטטוס</label>
+                    <select id="filterStatus">
+                        <option value="">כל הסטטוסים</option>
+                        <option value="uploaded">הועלה</option>
+                        <option value="processed">מעובד</option>
+                        <option value="error">שגיאה</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="button" class="filter-btn filter-btn-primary" onclick="applyFilters()">סינון</button>
+                <button type="button" class="filter-btn filter-btn-primary" onclick="clearFilters()">נקה סינון</button>
+            </div>
+        </div>
+    </div>
+    
+    {% if files %}
+    <div class="table-scroll">
+        <table class="files-table data-table">
+            <thead>
+                <tr>
+                    <th>שם קובץ</th>
+                    <th>תזרים</th>
+                    <th>סוג</th>
+                    <th>גודל</th>
+                    <th>תאריך העלאה</th>
+                    <th>סטטוס</th>
+                    <th>עסקאות</th>
+                    <th style="text-align: left;">פעולות</th>
+                </tr>
+            </thead>
+            <tbody id="filesTableBody">
+                {% for file in files %}
+                <tr data-flow="{{ file.flow_name }}" 
+                    data-status="{{ file.status }}" 
+                    data-type="{{ file.file_type }}"
+                    data-date="{{ file.upload_date[:10] if file.upload_date else '' }}"
+                    data-file-id="{{ file.id }}"
+                    data-stored-filename="{{ file.stored_filename }}">
+                    <td style="color: #333;">
+                        {{ file.original_filename }}
+                    </td>
+                    <td>{{ file.flow_name }}</td>
+                    <td>{{ file.file_type }}</td>
+                    <td>
+                        {% if file.file_size %}
+                            {{ "%.1f"|format(file.file_size / 1024) }} KB
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ file.upload_date[:16] if file.upload_date else '-' }}</td>
+                    <td>
+                        {% if file.status == 'processed' %}
+                            <span class="status-badge status-processed">מעובד</span>
+                        {% elif file.status == 'error' %}
+                            <span class="status-badge status-error">שגיאה</span>
+                        {% else %}
+                            <span class="status-badge status-uploaded">הועלה</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ file.num_transactions }}</td>
+                    <td style="text-align: left; white-space: nowrap;">
+                        <button 
+                            class="filter-btn filter-btn-primary" 
+                            onclick="processFile({{ file.id }}, '{{ file.original_filename }}')"
+                            style="margin-left: 0.5rem;{% if file.processed %} opacity: 0.4; cursor: not-allowed;{% endif %}"
+                            {% if file.processed %}disabled{% endif %}>
+                            עיבוד
+                        </button>
+                        <button 
+                            class="filter-btn filter-btn-primary" 
+                            onclick="deleteFile({{ file.id }}, '{{ file.original_filename }}', {{ file.num_transactions }})">
+                            מחק
+                        </button>
+                        <button 
+                            class="filter-btn filter-btn-primary" 
+                            onclick="deleteFile({{ file.id }}, '{{ file.original_filename }}', {{ file.num_transactions }})">
+                            מחק
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="no-data">
+        <div style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;">📂</div>
+        <p>טרם הועלו קבצים</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">השתמש בטופס למעלה להעלאת קובץ ראשון</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- מודל כפילות -->
+<div id="duplicateModal" class="modal">
+    <div class="modal-content">
+        <h3 style="color: var(--warning-color);">קובץ כפול</h3>
+        <p>הקובץ הזה כבר הועלה למערכת:</p>
+        <ul id="duplicateInfo" style="margin: 1rem 0; color: var(--secondary-color);"></ul>
+        <p>האם להעלות בכל זאת?</p>
+        <div class="button-group" style="margin-top: 1.5rem;">
+            <button class="btn-small btn-view" onclick="closeDuplicateModal()">ביטול</button>
+            <button class="btn btn-primary" onclick="uploadAnyway()">העלה בכל זאת</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* תגיות סטטוס */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-uploaded {
+    background: #E3F2FD;
+    color: #1976D2;
+}
+
+.status-processed {
+    background: #E8F5E9;
+    color: #388E3C;
+}
+
+.status-error {
+    background: #FFEBEE;
+    color: #D32F2F;
+}
+
+/* מודל */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    right: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const uploadForm = document.getElementById('uploadForm');
+const uploadBtn = document.getElementById('uploadBtn');
+const manualForm = document.getElementById('manualForm');
+const manualBtn = document.getElementById('manualBtn');
+const messageArea = document.getElementById('messageArea');
+
+// הגדרת תאריך נוכחי בהזנה ידנית
+document.getElementById('manual_date').valueAsDate = new Date();
+
+// שינוי טקסט בחירת קובץ
+document.getElementById('file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'Excel (.xlsx, .xls), CSV, TSV | מקסימום: 50MB';
+    // הטקסט משתנה אוטומטית על ידי הדפדפן
+});
+
+// פונקציות סינון - כמו בדף רשומות
+function toggleFilterPanel() {
+    const content = document.getElementById('filterContent');
+    const icon = document.getElementById('filterToggle');
+    
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        icon.classList.remove('open');
+    } else {
+        content.classList.add('open');
+        icon.classList.add('open');
+    }
+}
+
+function closeFilterPanel() {
+    const content = document.getElementById('filterContent');
+    const icon = document.getElementById('filterToggle');
+    content.classList.remove('open');
+    icon.classList.remove('open');
+    
+    // סגירת תפריטי גלילה פתוחים
+    const inputs = content.querySelectorAll('input, select');
+    inputs.forEach(input => input.blur());
+}
+
+// העלאת קובץ
+uploadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(uploadForm);
+    const fileInput = document.getElementById('file');
+    
+    if (!fileInput.files.length) {
+        showMessage('יש לבחור קובץ', 'error');
+        return;
+    }
+    
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'שומר...';
+    
+    try {
+        const response = await fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.status === 409 && data.duplicate) {
+            showDuplicateModal(data.duplicate_info);
+            // איפוס הטופס כולל התזרים - חזרה לברירת מחדל
+            uploadForm.reset();
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'שמור';
+            return;
+        }
+        
+        if (data.success) {
+            showMessage('הקובץ הועלה בהצלחה!', 'success');
+            uploadForm.reset();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showMessage(data.error || 'שגיאה בהעלאת הקובץ', 'error');
+        }
+        
+    } catch (error) {
+        showMessage('שגיאת תקשורת: ' + error.message, 'error');
+    } finally {
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'שמור';
+    }
+});
+
+// הזנה ידנית
+manualForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    manualBtn.disabled = true;
+    manualBtn.textContent = 'שומר...';
+    
+    showMessage('פיצ\'ר הזנה ידנית יושם בשלב הבא (Milestone 4 - חלק 2)', 'warning');
+    
+    setTimeout(() => {
+        manualBtn.disabled = false;
+        manualBtn.textContent = 'שמור';
+        manualForm.reset();
+        document.getElementById('manual_category_id').disabled = true;
+        document.getElementById('manual_category_id').innerHTML = '<option value="">קטגוריה</option>';
+    }, 2000);
+});
+
+// טעינת קטגוריות לפי תזרים
+async function loadCategories() {
+    const flowId = document.getElementById('manual_flow_id').value;
+    const categorySelect = document.getElementById('manual_category_id');
+    
+    if (!flowId) {
+        categorySelect.disabled = true;
+        categorySelect.innerHTML = '<option value="">קטגוריה</option>';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/categories/by-flow/${flowId}`);
+        const data = await response.json();
+        
+        if (data.success && data.categories.length > 0) {
+            categorySelect.innerHTML = '<option value="">בחר קטגוריה</option>';
+            data.categories.forEach(cat => {
+                const indent = '　'.repeat(cat.level - 1);
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = indent + cat.name;
+                categorySelect.appendChild(option);
+            });
+            categorySelect.disabled = false;
+        } else {
+            categorySelect.innerHTML = '<option value="">אין קטגוריות</option>';
+            categorySelect.disabled = true;
+        }
+        
+    } catch (error) {
+        categorySelect.innerHTML = '<option value="">שגיאה</option>';
+        categorySelect.disabled = true;
+    }
+}
+
+// מחיקת קובץ
+async function deleteFile(fileId, filename, numTransactions) {
+    let confirmMsg = `האם למחוק את הקובץ "${filename}"?`;
+    if (numTransactions > 0) {
+        confirmMsg += `\n\nפעולה זו תמחק גם ${numTransactions} עסקאות מקושרות!`;
+    }
+    
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/files/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('הקובץ נמחק בהצלחה', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showMessage(data.error || 'שגיאה במחיקת הקובץ', 'error');
+        }
+        
+    } catch (error) {
+        showMessage('שגיאת תקשורת: ' + error.message, 'error');
+    }
+}
+
+// עיבוד קובץ לעסקאות
+async function processFile(fileId, filename) {
+    // הצגת הודעת טעינה
+    showMessage('מעבד קובץ...', 'info');
+    
+    try {
+        const response = await fetch(`/api/files/${fileId}/process`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage(`הקובץ עובד בהצלחה! נוצרו ${data.num_transactions} עסקאות`, 'success');
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showMessage(data.error || 'שגיאה בעיבוד הקובץ', 'error');
+        }
+        
+    } catch (error) {
+        showMessage('שגיאת תקשורת: ' + error.message, 'error');
+    }
+}
+
+// סינון טבלה
+function applyFilters() {
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const amountFrom = document.getElementById('filterAmountFrom').value;
+    const amountTo = document.getElementById('filterAmountTo').value;
+    const flow = document.getElementById('filterFlow').value;
+    const status = document.getElementById('filterStatus').value;
+    
+    // ולידציה של תאריכים
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+        showMessage('תאריך "מתאריך" חייב להיות לפני תאריך "עד תאריך"', 'error');
+        return;
+    }
+    
+    const rows = document.querySelectorAll('#filesTableBody tr');
+    
+    rows.forEach(row => {
+        let show = true;
+        
+        // סינון תאריך
+        const rowDate = row.dataset.date;
+        if (dateFrom && rowDate < dateFrom) show = false;
+        if (dateTo && rowDate > dateTo) show = false;
+        
+        // סינון סכום (אם קיים)
+        const rowAmount = parseFloat(row.dataset.amount);
+        if (!isNaN(rowAmount)) {
+            if (amountFrom && rowAmount < parseFloat(amountFrom)) show = false;
+            if (amountTo && rowAmount > parseFloat(amountTo)) show = false;
+        }
+        
+        // סינון תזרים
+        if (flow) {
+            const flowName = row.dataset.flow;
+            const selectedFlow = document.getElementById('filterFlow').selectedOptions[0].text;
+            if (flowName !== selectedFlow) show = false;
+        }
+        
+        // סינון סטטוס
+        if (status && row.dataset.status !== status) show = false;
+        
+        row.style.display = show ? '' : 'none';
+    });
+    
+    // סגירת הסינון לאחר ביצוע
+    closeFilterPanel();
+}
+
+function clearFilters() {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterAmountFrom').value = '';
+    document.getElementById('filterAmountTo').value = '';
+    document.getElementById('filterFlow').value = '';
+    document.getElementById('filterStatus').value = '';
+    
+    const rows = document.querySelectorAll('#filesTableBody tr');
+    rows.forEach(row => row.style.display = '');
+}
+
+// הודעות
+function showMessage(text, type = 'info') {
+    const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-warning';
+    messageArea.innerHTML = `<div class="alert ${alertClass}">${text}</div>`;
+    setTimeout(() => {
+        messageArea.innerHTML = '';
+    }, 2500); // 2.5 שניות
+}
+
+// מודל כפילות
+function showDuplicateModal(duplicateInfo) {
+    const modal = document.getElementById('duplicateModal');
+    const infoList = document.getElementById('duplicateInfo');
+    
+    infoList.innerHTML = `
+        <li><strong>שם קובץ:</strong> ${duplicateInfo.filename}</li>
+        <li><strong>תזרים:</strong> ${duplicateInfo.flow_name || 'לא ידוע'}</li>
+        <li><strong>תאריך העלאה:</strong> ${duplicateInfo.upload_date}</li>
+        <li><strong>מעובד:</strong> ${duplicateInfo.processed ? 'כן' : 'לא'}</li>
+        <li><strong>עסקאות:</strong> ${duplicateInfo.num_transactions}</li>
+    `;
+    
+    modal.classList.add('show');
+}
+
+function closeDuplicateModal() {
+    document.getElementById('duplicateModal').classList.remove('show');
+}
+
+function uploadAnyway() {
+    alert('פיצ\'ר "העלה בכל זאת" טרם יושם. המערכת מונעת כפילויות.');
+    closeDuplicateModal();
+}
+
+// סגירת מודל בלחיצה מחוץ
+document.getElementById('duplicateModal').addEventListener('click', (e) => {
+    if (e.target.id === 'duplicateModal') {
+        closeDuplicateModal();
+    }
+});
+
+// סגירת סינון בלחיצה על ENTER
+document.getElementById('filterContent').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
+
+// הסרת event listener מיותר - onmouseleave כבר עושה את העבודה
+</script>
+{% endblock %}

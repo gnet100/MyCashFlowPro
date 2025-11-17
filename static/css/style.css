@@ -1,0 +1,961 @@
+/* 
+style.css
+עיצוב מינימליסטי - אפור ותכלת
+RTL עברית
+גרסה מעודכנת עם תזרימים וכרטיסי דפים
+*/
+
+/* ========== צבעים ========== */
+:root {
+    --primary-color: #7092BE;      /* כחול */
+    --secondary-color: #6C757D;    /* אפור כהה */
+    --light-gray: #F5F5F5;         /* אפור בהיר */
+    --medium-gray: #E0E0E0;        /* אפור בינוני */
+    --dark-gray: #333333;          /* אפור כהה */
+    --success-color: #28A745;      /* ירוק */
+    --warning-color: #FFC107;      /* כתום */
+    --error-color: #DC3545;        /* אדום */
+    --white: #FFFFFF;
+    --border-radius: 8px;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ========== איפוס כללי ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* ========== תפריט ניווט ========== */
+.navbar {
+    background-color: var(--white);
+    box-shadow: var(--shadow);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand h1 {
+    color: #394A61;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.nav-menu a {
+    color: var(--secondary-color);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.25rem 1rem;
+    border-radius: var(--border-radius);
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nav-icon {
+    font-size: 1.1rem;
+}
+
+.nav-menu a:hover {
+    background-color: #F0F0F0;
+    color: var(--dark-gray);
+}
+
+.nav-menu a.active {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+/* ========== תוכן ראשי ========== */
+main {
+    padding: 2rem 0;
+    min-height: calc(100vh - 200px);
+}
+
+h2 {
+    color: var(--dark-gray);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+h3 {
+    color: var(--secondary-color);
+    font-size: 1.5rem;
+    margin: 2rem 0 1rem;
+    font-weight: 600;
+}
+
+h4 {
+    color: var(--secondary-color);
+    font-size: 1.2rem;
+    margin: 1rem 0 0.5rem;
+}
+
+/* ========== הודעות ========== */
+.welcome-message {
+    background-color: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    border-right: 4px solid var(--primary-color);
+    margin: 1.5rem 0;
+    box-shadow: var(--shadow);
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.alert-success {
+    background-color: #D4EDDA;
+    border: 1px solid var(--success-color);
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #F8D7DA;
+    border: 1px solid var(--error-color);
+    color: #721C24;
+}
+
+.alert-warning {
+    background-color: #FFF3CD;
+    border: 1px solid var(--warning-color);
+    color: #856404;
+}
+
+/* אזור הודעות צף */
+#messageArea {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 600px;
+}
+
+/* ========== תזרימי כספים ========== */
+.flows-section {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin: 2rem 0;
+}
+
+.flows-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.flow-card {
+    background-color: var(--light-gray);
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    transition: all 0.3s;
+}
+
+.flow-card.active {
+    border-color: var(--primary-color);
+    background-color: #E3F2FD;
+}
+
+.flow-header {
+    margin-bottom: 1rem;
+}
+
+.flow-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    font-size: 1.1rem;
+}
+
+.flow-radio-label input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.flow-name {
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.flow-description {
+    margin-top: 0.5rem;
+    color: var(--secondary-color);
+    font-size: 0.95rem;
+    margin-right: 2.5rem;
+}
+
+.flow-stats-mini {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--white);
+    border-radius: 6px;
+}
+
+.mini-stat {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mini-stat-label {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+.mini-stat-value {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.no-data {
+    color: var(--secondary-color);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+}
+
+/* ========== כרטיסי סטטיסטיקה - קומפקטי ========== */
+.stats-grid-compact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin: 0.5rem 0;
+}
+
+.stat-card-compact {
+    background-color: var(--white);
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.stat-card-compact:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card-compact.warning {
+    border: 2px solid var(--warning-color);
+}
+
+.stat-card-compact .stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 0.3rem;
+}
+
+.stat-card-compact .stat-label {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    font-weight: 500;
+}
+
+/* ========== כרטיסי דפים ========== */
+.pages-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+    margin: 2rem 0;
+}
+
+.page-card {
+    background-color: var(--white);
+    padding: 0.8rem 1.2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: var(--dark-gray);
+    transition: all 0.3s;
+    border-right: 4px solid transparent;
+}
+
+.page-card:hover {
+    transform: translateX(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-right-color: var(--primary-color);
+}
+
+.page-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.page-card.disabled:hover {
+    transform: none;
+    border-right-color: transparent;
+}
+
+.page-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.page-content {
+    flex: 1;
+}
+
+.page-content h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    color: var(--dark-gray);
+}
+
+.page-content p {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.page-content .coming-soon {
+    color: var(--warning-color);
+    font-style: italic;
+}
+
+/* ========== נתוני דוגמה ========== */
+.demo-data-section {
+    margin: 2rem 0;
+}
+
+.demo-data-box {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    border: 2px dashed var(--primary-color);
+}
+
+.demo-data-box h4 {
+    margin-top: 0;
+    color: var(--primary-color);
+}
+
+.demo-data-box p {
+    margin: 1rem 0;
+    color: var(--secondary-color);
+}
+
+/* ========== מילסטונים ========== */
+.milestones-section {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin: 2rem 0;
+}
+
+.milestones-list {
+    list-style: none;
+    padding: 1rem 0;
+}
+
+.milestones-list li {
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    font-size: 1.05rem;
+}
+
+.milestones-list li.completed {
+    background-color: #D4EDDA;
+    color: #155724;
+}
+
+.milestones-list li.in-progress {
+    background-color: #FFF3CD;
+    color: #856404;
+}
+
+.milestones-list li.pending {
+    background-color: var(--light-gray);
+    color: var(--secondary-color);
+}
+
+/* ========== דף טבלאות DB ========== */
+.database-page {
+    max-width: 1400px;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-subtitle {
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    margin-top: 0.5rem;
+}
+
+.db-stats-section {
+    background-color: var(--white);
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin: 1rem 0;
+}
+
+.db-description {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+    text-align: center;
+}
+
+.tables-section {
+    margin: 2rem 0;
+}
+
+.tables-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.table-card {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.table-card-header {
+    padding: 1.5rem;
+    background-color: var(--light-gray);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.table-card-header:hover {
+    background-color: var(--medium-gray);
+}
+
+.table-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.table-icon {
+    font-size: 1.5rem;
+}
+
+.table-title h4 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--dark-gray);
+}
+
+.table-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.table-count {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.expand-icon {
+    font-size: 1.2rem;
+    color: var(--secondary-color);
+}
+
+.table-card-body {
+    padding: 1.5rem;
+}
+
+.table-card-body.collapsed {
+    display: none;
+}
+
+.table-description {
+    color: var(--secondary-color);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+}
+
+.table-columns {
+    margin-bottom: 1.5rem;
+}
+
+.table-columns h5 {
+    color: var(--dark-gray);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.columns-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.5rem;
+}
+
+.columns-list li {
+    padding: 0.5rem 0.75rem;
+    background-color: var(--light-gray);
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.col-name {
+    color: var(--dark-gray);
+    font-weight: 500;
+}
+
+.col-type {
+    color: var(--secondary-color);
+    font-size: 0.85rem;
+}
+
+.table-sample {
+    margin-bottom: 1.5rem;
+}
+
+.table-sample h5 {
+    color: var(--dark-gray);
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--medium-gray);
+    border-radius: 6px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table thead {
+    background-color: var(--light-gray);
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--medium-gray);
+}
+
+.data-table th {
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.data-table td {
+    color: var(--secondary-color);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--light-gray);
+}
+
+.table-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-view {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-view:hover {
+    background-color: #357ABD;
+}
+
+.relationships-section {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin: 2rem 0;
+}
+
+.relationships-box {
+    margin-top: 1rem;
+}
+
+.relationship-item {
+    padding: 1rem;
+    margin: 0.5rem 0;
+    background-color: var(--light-gray);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.relationship-item strong {
+    color: var(--primary-color);
+}
+
+/* ========== כפתורים ========== */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background-color: #5D799E;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* כללים גלובליים להצבת כפתורים בצד שמאל (מערב) - סוף השורה ב-RTL */
+.form-actions,
+.modal-footer,
+.button-group,
+.action-buttons,
+.table-actions,
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end; /* שמאל (מערב) ב-RTL */
+}
+
+/* רווח עליון ל-table-actions */
+.table-actions {
+    margin-top: 1rem;
+}
+
+/* כפתור בדיקת API */
+.api-test-btn {
+    margin-top: 1rem;
+}
+
+/* כותרת עם כפתורים בדף DB */
+.db-header-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* לכפתורים בתוך containers */
+.page-header .btn,
+.category-tree-header-actions {
+    margin-right: auto; /* דוחף לשמאל ב-RTL */
+}
+
+/* ========== פוטר ========== */
+footer {
+    background-color: var(--white);
+    padding: 2rem 0;
+    text-align: center;
+    border-top: 2px solid var(--medium-gray);
+    margin-top: 3rem;
+}
+
+footer p {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+/* ========== תהליך התחברות ========== */
+.connection-section {
+    background-color: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin: 2rem 0;
+    border-right: 4px solid var(--primary-color);
+}
+
+.connection-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.step-card {
+    background-color: var(--light-gray);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.step-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.step-number {
+    background-color: var(--primary-color);
+    color: var(--white);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.step-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--dark-gray);
+    font-size: 1.1rem;
+}
+
+.step-content p {
+    margin: 0 0 0.5rem 0;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+.step-content code {
+    display: block;
+    background-color: var(--dark-gray);
+    color: #4AF626;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.api-info {
+    background-color: var(--light-gray);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-top: 2rem;
+}
+
+.api-info h4 {
+    margin-top: 0;
+    color: var(--primary-color);
+}
+
+.api-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.api-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--medium-gray);
+}
+
+.api-list li:last-child {
+    border-bottom: none;
+}
+
+.api-list code {
+    background-color: var(--white);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* ========== Connection Guide ========== */
+.connection-guide {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.collapsible-header {
+    padding: 0.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--border-radius);
+    color: white;
+    transition: all 0.3s;
+}
+
+.collapsible-header:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.collapsible-content {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.guide-section h5 {
+    color: var(--primary-color);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.guide-section code {
+    background: #2d3748;
+    color: #68d391;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.guide-section ol, .guide-section ul {
+    margin: 0.5rem 0;
+    padding-right: 1.5rem;
+}
+
+.guide-section li {
+    margin: 0.5rem 0;
+}
+
+.guide-section a {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.guide-section a:hover {
+    color: #2c5aa0;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .nav-menu {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .stats-grid-compact {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .pages-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .columns-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .flow-stats-mini {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid-compact {
+        grid-template-columns: 1fr;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.2rem;
+    }
+}

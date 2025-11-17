@@ -1,0 +1,1135 @@
+{% extends "base.html" %}
+
+{% block title %}מסד רשומות - ניהול כספים{% endblock %}
+
+{% block extra_css %}
+<style>
+.transactions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.summary-card.income {
+    border-right: 4px solid #28A745;
+}
+
+.summary-card.expense {
+    border-right: 4px solid #DC3545;
+}
+
+.summary-card.balance {
+    border-right: 4px solid #4A90E2;
+}
+
+.summary-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0.3rem 0;
+}
+
+.summary-label {
+    color: #6C757D;
+    font-size: 0.9rem;
+}
+
+.transactions-table {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #F5F5F5;
+}
+
+th {
+    padding: 0.6rem 0.7rem;
+    text-align: right;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #E0E0E0;
+    line-height: 1.2;
+    height: 28px;
+}
+
+td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #F0F0F0;
+    line-height: 1.1;
+    height: 28px;
+    font-size: 0.9rem;
+}
+
+.category-cell {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+    height: 28px !important;
+    vertical-align: middle;
+    padding: 0.3rem 0.5rem !important;
+    line-height: 1.1 !important;
+}
+
+.category-cell:hover {
+    background-color: #e0f7fa;
+}
+
+.category-text {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.category-select {
+    width: auto;
+    min-width: 250px;
+    padding: 0.3rem;
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    background: white;
+    font-size: 0.9rem;
+    direction: ltr; /* פס גלילה בצד שמאל */
+    text-align: right; /* טקסט ימינה */
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.category-select::-webkit-scrollbar {
+    width: 8px;
+}
+
+.category-select::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.category-select::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.category-select::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+tr:hover {
+    background: #F8F9FA;
+}
+
+.amount-positive {
+    color: #28A745;
+    font-weight: 600;
+}
+
+.amount-negative {
+    color: #DC3545;
+    font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.badge-credit {
+    /* ביטול רקע וצבע */
+    color: inherit;
+}
+
+.badge-bank {
+    /* ביטול רקע וצבע */
+    color: inherit;
+}
+
+.badge-installment {
+    background: #FFF3E0;
+    color: #F57C00;
+}
+
+.excluded-row {
+    /* ביטול עיצוב מיוחד - כל השורות נראות אותו דבר */
+}
+
+.excluded-row td {
+    /* ביטול קו מחיקה */
+}
+
+.no-data {
+    text-align: center;
+    padding: 3rem;
+    color: #6C757D;
+}
+
+/* פאנל סינון */
+.filter-panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.filter-header {
+    padding: 1rem 1.5rem;
+    background: #F5F5F5;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.filter-header:hover {
+    background: #E8E8E8;
+}
+
+.filter-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+}
+
+.filter-toggle {
+    font-size: 1.2rem;
+    color: #666;
+    transition: transform 0.3s;
+}
+
+.filter-toggle.open {
+    transform: rotate(180deg);
+}
+
+.filter-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.filter-content.open {
+    max-height: 400px;
+}
+
+.filter-grid-two-rows {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    padding: 1.5rem;
+    padding-left: 1rem; /* שמירת רווח מדופן ימין */
+}
+
+.filter-grid-three-rows {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    padding: 1.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 1rem;
+}
+
+.filter-search-wide {
+    grid-column: 1 / 4; /* חצי שורה - 3 מתוך 6 עמודות */
+}
+
+.filter-search-wide-row2 {
+    grid-column: 3 / 6; /* תופס 3 עמודות אחרונות */
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 0.4rem;
+}
+
+.filter-field input,
+.filter-field select {
+    padding: 0.5rem;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+    outline: none;
+    border-color: #4A90E2;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 1.5rem 1.5rem;
+    justify-content: flex-end; /* כפתורים בצד ימין (סוף השורה ב-RTL) */
+}
+
+.filter-btn {
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn-primary {
+    background: #7092BE;
+    color: white;
+}
+
+.filter-btn-primary:hover {
+    background: #5D799E;
+}
+
+.filter-btn-secondary {
+    background: #E0E0E0;
+    color: #555;
+}
+
+.filter-btn-secondary:hover {
+    background: #D0D0D0;
+}
+
+/* סגנון למודל */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #E0E0E0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.3s;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #7092BE;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5D799E;
+}
+
+.btn-secondary {
+    background: #7092BE;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5D799E;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="transactions-page">
+    <div class="transactions-header">
+        <h2>📊 מסד רשומות</h2>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">
+        <strong>שגיאה:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- סיכום -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="summary-label">סה"כ רשומות</div>
+            <div class="summary-value">{{ stats.count if stats else 0 }}</div>
+        </div>
+        
+        <div class="summary-card income">
+            <div class="summary-label">הכנסות</div>
+            <div class="summary-value amount-positive">
+                ₪{{ "{:,.2f}".format(stats.income) if stats else '0.00' }}
+            </div>
+        </div>
+        
+        <div class="summary-card expense">
+            <div class="summary-label">הוצאות</div>
+            <div class="summary-value amount-negative">
+                ₪{{ "{:,.2f}".format(stats.expenses) if stats else '0.00' }}
+            </div>
+        </div>
+        
+        <div class="summary-card balance">
+            <div class="summary-label">מאזן</div>
+            <div class="summary-value" style="color: {% if stats and stats.balance >= 0 %}#28A745{% else %}#DC3545{% endif %}">
+                ₪{{ "{:,.2f}".format(stats.balance) if stats else '0.00' }}
+            </div>
+        </div>
+    </div>
+
+    <!-- פאנל סינון -->
+    <div class="filter-panel" id="filterPanel" onmouseleave="closeFilterPanel()">
+        <div class="filter-header" onclick="toggleFilterPanel()">
+            <h4>🔍 סינון רשומות</h4>
+            <span class="filter-toggle" id="filterToggle">▼</span>
+        </div>
+        <div class="filter-content" id="filterContent">
+            <div class="filter-grid-three-rows">
+                <!-- שורה 1: תזרים - חשבונות - קטגוריה - מתאריך - עד תאריך (5 שדות) -->
+                <div class="filter-field">
+                    <label>תזרים</label>
+                    <select id="filterFlow">
+                        <option value="">כל התזרימים</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>חשבון</label>
+                    <select id="filterAccount">
+                        <option value="">כל החשבונות</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>קטגוריה</label>
+                    <select id="filterCategory">
+                        <option value="">כל הקטגוריות</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label>מתאריך</label>
+                    <input type="date" id="filterDateFrom">
+                </div>
+                <div class="filter-field">
+                    <label>עד תאריך</label>
+                    <input type="date" id="filterDateTo">
+                </div>
+                
+                <!-- שורה 2: סכום מינימלי - סכום מקסימלי - חיפוש חופשי -->
+                <div class="filter-field">
+                    <label>סכום מינימלי</label>
+                    <input type="number" id="filterAmountMin" placeholder="0">
+                </div>
+                <div class="filter-field">
+                    <label>סכום מקסימלי</label>
+                    <input type="number" id="filterAmountMax" placeholder="999999">
+                </div>
+                <div class="filter-field filter-search-wide-row2">
+                    <label>חיפוש חופשי</label>
+                    <input type="text" id="filterSearch" placeholder="חפש בתיאור הרשומה...">
+                </div>
+            </div>
+            <!-- שורה 3: כפתורים -->
+            <div class="filter-actions">
+                <button class="filter-btn filter-btn-primary" onclick="applyFilters()">סנן</button>
+                <button class="filter-btn filter-btn-primary" onclick="clearFilters()">נקה סינון</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- טבלת רשומות -->
+    <div class="transactions-table">
+        {% if transactions %}
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px">ID</th>
+                    <th>תאריך</th>
+                    <th>תיאור</th>
+                    <th>סכום</th>
+                    <th>קטגוריה</th>
+                    <th>תזרים</th>
+                    <th>סוג</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trans in transactions %}
+                <tr {% if trans.is_excluded %}class="excluded-row"{% endif %}>
+                    <td style="color: #999; font-size: 0.85rem">#{{ trans.id }}</td>
+                    <td>{{ trans.date }}</td>
+                    <td>
+                        {{ trans.description }}
+                        {% if trans.is_installment %}
+                        <span class="badge badge-installment">
+                            תשלום {{ trans.installment_number }}/{{ trans.total_installments }}
+                        </span>
+                        {% endif %}
+                        {% if trans.is_excluded %}
+                        <span class="badge" style="background:#E0E0E0">מקושק</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="{% if trans.amount > 0 %}amount-positive{% else %}amount-negative{% endif %}">
+                            ₪{{ "{:,.2f}".format(trans.amount|abs) }}
+                        </span>
+                        {% if trans.is_installment and trans.monthly_amount != trans.total_amount %}
+                        <br>
+                        <small style="color:#6C757D">
+                            (מתוך ₪{{ "{:,.2f}".format(trans.total_amount|abs) }})
+                        </small>
+                        {% endif %}
+                    </td>
+                    <td class="category-cell" data-transaction-id="{{ trans.id }}" ondblclick="editCategory(this)">
+                        <span class="category-text">{{ trans.category }}</span>
+                    </td>
+                    <td>{{ trans.flow or 'לא מוגדר' }}</td>
+                    <td>{{ trans.account }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">
+            <h3>אין רשומות עדיין</h3>
+            <p>העלה קובץ או הוסף רשומה ידנית כדי להתחיל</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- מודל הוספת קטגוריה חדשה -->
+<div id="addCategoryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>הוספת קטגוריה חדשה</h3>
+            <button class="modal-close" onclick="closeAddCategoryModal()">✖</button>
+        </div>
+        <form id="addCategoryForm" onsubmit="return false;">
+            <div class="form-group">
+                <label>שם הקטגוריה *</label>
+                <input type="text" id="newCategoryName" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label>קטגוריית אב (אופציונלי)</label>
+                <select id="newCategoryParent" class="form-input">
+                    <option value="">--- אין - קטגוריה ראשית ---</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>תזרים *</label>
+                <select id="newCategoryFlow" class="form-input" required>
+                    <option value="">בחר תזרים...</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="saveNewCategory()">יצירה ושיוך</button>
+                <button type="button" class="btn btn-secondary" onclick="closeAddCategoryModal()">ביטול</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// רשימת כל הקטגוריות (ייטען בטעינת הדף)
+let allCategories = [];
+
+// רשימת כל התזרימים (ייטען בטעינת הדף)
+let allFlows = [];
+
+// משתנה גלובלי לשמירת ה-transaction ID והתא שנערך
+let pendingTransactionId = null;
+let pendingCell = null;
+
+// טעינת קטגוריות
+async function loadCategories() {
+    console.log('Loading categories...');
+    try {
+        const response = await fetch('/categories/api/list');
+        const data = await response.json();
+        console.log('Categories response:', data);
+        if (data.success) {
+            allCategories = data.categories;
+            console.log('Loaded categories:', allCategories.length);
+            // טעינת אפשרויות סינון אחרי שהנתונים נטענו
+            loadFilterOptions();
+        }
+    } catch (error) {
+        console.error('שגיאה בטעינת קטגוריות:', error);
+    }
+}
+
+// טעינת תזרימים
+async function loadFlows() {
+    console.log('Loading flows...');
+    try {
+        const response = await fetch('/api/flows');
+        const data = await response.json();
+        console.log('Flows response:', data);
+        if (data.success) {
+            allFlows = data.flows;
+            console.log('Loaded flows:', allFlows.length);
+            // טעינת אפשרויות סינון אחרי שהנתונים נטענו
+            loadFilterOptions();
+        }
+    } catch (error) {
+        console.error('שגיאה בטעינת תזרימים:', error);
+    }
+}
+
+// עריכת קטגוריה בדבל-קליק - פונקציה גלובלית
+window.editCategory = function(cell) {
+    console.log('editCategory called', cell);
+    console.log('allCategories:', allCategories);
+    
+    // מניעת פתיחה כפולה
+    if (cell.querySelector('select')) {
+        return;
+    }
+    
+    if (!allCategories || allCategories.length === 0) {
+        alert('טוען קטגוריות... נסה שוב');
+        loadCategories();
+        return;
+    }
+    
+    const transactionId = cell.getAttribute('data-transaction-id');
+    const categoryTextEl = cell.querySelector('.category-text');
+    const currentCategory = categoryTextEl ? categoryTextEl.textContent : '';
+    
+    // שמירת התוכן המקורי
+    const originalContent = cell.innerHTML;
+    
+    // יצירת select
+    const select = document.createElement('select');
+    select.className = 'category-select';
+    
+    // הוספת אפשרויות מיוחדות
+    select.innerHTML = `
+        <option value="">בחר קטגוריה...</option>
+        <option value="__new__" style="font-weight: bold; color: #4A90E2;">הוספת קטגוריה חדשה</option>
+        <option value="0" style="font-weight: bold; color: #4A90E2;">ללא סיווג</option>
+        <option disabled>──────────</option>
+    `;
+    
+    // הוספת קטגוריות קיימות
+    allCategories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.full_path;
+        if (cat.full_path === currentCategory) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // הוספת ה-select לתא (לא החלפה)
+    cell.appendChild(select);
+    
+    // הצגת התפריט כפתוח (size > 1 מציג תפריט פתוח)
+    select.size = Math.min(select.options.length, 10); // מקסימום 10 שורות
+    
+    select.focus();
+    select.scrollTop = 0; // פס הגלילה למעלה
+    
+    // שמירה בשינוי
+    select.onchange = async function() {
+        const newCategoryId = this.value;
+        
+        // אם בחרו ביצירת קטגוריה חדשה
+        if (newCategoryId === '__new__') {
+            select.remove();
+            openAddCategoryModal(transactionId, cell);
+            return;
+        }
+        
+        if (newCategoryId !== '') {
+            try {
+                const response = await fetch(`/api/transactions/${transactionId}/category`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ category_id: parseInt(newCategoryId) })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // הסרת ה-select
+                    select.remove();
+                    
+                    // עדכון תצוגת הקטגוריה
+                    if (newCategoryId === '0') {
+                        categoryTextEl.textContent = 'לא מסווג';
+                        categoryTextEl.style.fontWeight = 'bold';
+                        categoryTextEl.style.color = '#D4A520'; // צהוב-חרדל
+                    } else {
+                        const selectedOption = this.options[this.selectedIndex];
+                        categoryTextEl.textContent = selectedOption.textContent;
+                        categoryTextEl.style.fontWeight = 'normal';
+                        categoryTextEl.style.color = '';
+                    }
+                    
+                    // עדכון תצוגת התזרים בעמודה הבאה
+                    const flowCell = cell.nextElementSibling;
+                    if (flowCell && data.flow_name) {
+                        flowCell.textContent = data.flow_name;
+                    }
+                } else {
+                    alert('שגיאה: ' + data.error);
+                    select.remove();
+                }
+            } catch (error) {
+                alert('שגיאה בשמירה: ' + error);
+                select.remove();
+            }
+        }
+    };
+    
+    // ביטול בלחיצה מחוץ לשדה
+    select.onblur = function() {
+        setTimeout(() => {
+            if (cell.contains(select)) {
+                select.remove();
+            }
+        }, 200);
+    };
+}
+
+// פתיחת מודל הוספת קטגוריה - פונקציה גלובלית
+window.openAddCategoryModal = async function(transactionId, cell) {
+    pendingTransactionId = transactionId;
+    pendingCell = cell;
+    
+    // טעינת קטגוריות לבחירת אב
+    const parentSelect = document.getElementById('newCategoryParent');
+    parentSelect.innerHTML = '<option value="">--- אין - קטגוריה ראשית ---</option>';
+    
+    allCategories.forEach(cat => {
+        if (cat.level <= 2) { // רק רמות 1-2 יכולות להיות הורים
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.full_path;
+            parentSelect.appendChild(option);
+        }
+    });
+    
+    // טעינת תזרימים
+    const flowSelect = document.getElementById('newCategoryFlow');
+    flowSelect.innerHTML = '<option value="">בחר תזרים...</option>';
+    
+    allFlows.forEach(flow => {
+        const option = document.createElement('option');
+        option.value = flow.id;
+        option.textContent = flow.name;
+        flowSelect.appendChild(option);
+    });
+    
+    // פתיחת המודל
+    document.getElementById('addCategoryModal').classList.add('active');
+    document.getElementById('newCategoryName').focus();
+}
+
+// סגירת מודל - פונקציה גלובלית
+window.closeAddCategoryModal = function() {
+    document.getElementById('addCategoryModal').classList.remove('active');
+    document.getElementById('addCategoryForm').reset();
+    pendingTransactionId = null;
+    pendingCell = null;
+}
+
+// שמירת קטגוריה חדשה - פונקציה גלובלית
+window.saveNewCategory = async function() {
+    const name = document.getElementById('newCategoryName').value.trim();
+    const parentId = document.getElementById('newCategoryParent').value || null;
+    const flowId = document.getElementById('newCategoryFlow').value;
+    
+    if (!name) {
+        alert('שם קטגוריה חובה');
+        return;
+    }
+    
+    if (!flowId) {
+        alert('יש לבחור תזרים');
+        return;
+    }
+    
+    try {
+        // יצירת הקטגוריה
+        const createResponse = await fetch('/categories/api/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                name: name, 
+                parent_id: parentId ? parseInt(parentId) : null,
+                flow_id: parseInt(flowId)
+            })
+        });
+        
+        const createData = await createResponse.json();
+        
+        if (createData.success) {
+            const newCategoryId = createData.category_id;
+            
+            // שיוך הקטגוריה לרשומה
+            const assignResponse = await fetch(`/api/transactions/${pendingTransactionId}/category`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ category_id: newCategoryId })
+            });
+            
+            const assignData = await assignResponse.json();
+            
+            if (assignData.success) {
+                // עדכון התצוגה
+                await loadCategories(); // טעינה מחדש של הקטגוריות
+                
+                // מציאת הקטגוריה החדשה
+                const newCategory = allCategories.find(c => c.id === newCategoryId);
+                if (newCategory && pendingCell) {
+                    pendingCell.innerHTML = '<span class="category-text">' + newCategory.full_path + '</span>';
+                    
+                    // עדכון גם את עמודת התזרים
+                    const flowCell = pendingCell.nextElementSibling;
+                    if (flowCell && assignData.flow_name) {
+                        flowCell.textContent = assignData.flow_name;
+                    }
+                }
+                
+                closeAddCategoryModal();
+            } else {
+                alert('שגיאה בשיוך: ' + assignData.error);
+            }
+        } else {
+            alert('שגיאה: ' + createData.error);
+        }
+    } catch (error) {
+        alert('שגיאה: ' + error.message);
+    }
+}
+
+// סגירת מודל בלחיצה מחוץ לתוכן
+window.onclick = function(event) {
+    const modal = document.getElementById('addCategoryModal');
+    if (event.target == modal) {
+        closeAddCategoryModal();
+    }
+}
+
+// טעינת קטגוריות ותזרימים בטעינת הדף
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadFlows();
+    highlightUncategorized();
+});
+
+// הדגשת רשומות "לא מסווג"
+function highlightUncategorized() {
+    const categoryCells = document.querySelectorAll('.category-cell .category-text');
+    categoryCells.forEach(cell => {
+        if (cell.textContent.trim() === 'לא מסווג') {
+            cell.style.fontWeight = 'bold';
+            cell.style.color = '#D4A520'; // צהוב-חרדל
+        }
+    });
+}
+
+// ===== פונקציות סינון =====
+
+// פתיחה/סגירה של פאנל הסינון
+window.toggleFilterPanel = function() {
+    const content = document.getElementById('filterContent');
+    const toggle = document.getElementById('filterToggle');
+    
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        toggle.classList.remove('open');
+    } else {
+        content.classList.add('open');
+        toggle.classList.add('open');
+    }
+}
+
+// סגירת פאנל כשהעכבר יוצא
+window.closeFilterPanel = function() {
+    const content = document.getElementById('filterContent');
+    const toggle = document.getElementById('filterToggle');
+    
+    if (content.classList.contains('open')) {
+        content.classList.remove('open');
+        toggle.classList.remove('open');
+    }
+}
+
+// טעינת אפשרויות סינון (קטגוריות, תזרימים וחשבונות)
+async function loadFilterOptions() {
+    // טעינת קטגוריות לסינון - רק אם יש ועדיין לא נטענו
+    const categorySelect = document.getElementById('filterCategory');
+    if (allCategories && allCategories.length > 0 && categorySelect.options.length === 1) {
+        allCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.full_path;
+            categorySelect.appendChild(option);
+        });
+        console.log('Loaded categories to filter:', allCategories.length);
+    }
+    
+    // טעינת תזרימים לסינון - רק אם יש ועדיין לא נטענו
+    const flowSelect = document.getElementById('filterFlow');
+    if (allFlows && allFlows.length > 0 && flowSelect && flowSelect.options.length === 1) {
+        allFlows.forEach(flow => {
+            const option = document.createElement('option');
+            option.value = flow.id;
+            option.textContent = flow.name;
+            flowSelect.appendChild(option);
+        });
+        console.log('Loaded flows to filter:', allFlows.length);
+    }
+    
+    // טעינת חשבונות לסינון - רק פעם אחת
+    const accountSelect = document.getElementById('filterAccount');
+    if (accountSelect && accountSelect.options.length === 1) {
+        try {
+            const accountsInTable = new Set();
+            
+            document.querySelectorAll('table tbody tr').forEach(row => {
+                const accountCell = row.cells[5]; // עמודת החשבון (סוג)
+                if (accountCell) {
+                    accountsInTable.add(accountCell.textContent.trim());
+                }
+            });
+            
+            accountsInTable.forEach(account => {
+                if (account) {
+                    const option = document.createElement('option');
+                    option.value = account;
+                    option.textContent = account;
+                    accountSelect.appendChild(option);
+                }
+            });
+            console.log('Loaded accounts to filter:', accountsInTable.size);
+        } catch (error) {
+            console.error('שגיאה בטעינת אפשרויות סינון:', error);
+        }
+    }
+}
+
+// החלת סינון
+window.applyFilters = function() {
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    const category = document.getElementById('filterCategory').value;
+    const flow = document.getElementById('filterFlow').value;
+    const account = document.getElementById('filterAccount').value;
+    const amountMin = parseFloat(document.getElementById('filterAmountMin').value) || 0;
+    const amountMax = parseFloat(document.getElementById('filterAmountMax').value) || Infinity;
+    const searchText = document.getElementById('filterSearch').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('table tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        let show = true;
+        
+        // סינון לפי תאריך
+        if (dateFrom || dateTo) {
+            const dateCell = row.cells[1]?.textContent.trim();
+            if (dateCell) {
+                const rowDate = convertDateToISO(dateCell);
+                if (dateFrom && rowDate < dateFrom) show = false;
+                if (dateTo && rowDate > dateTo) show = false;
+            }
+        }
+        
+        // סינון לפי קטגוריה (כולל תתי-קטגוריות)
+        if (category) {
+            const categoryCell = row.cells[4]?.textContent.trim();
+            const selectedCat = allCategories.find(c => c.id == category);
+            if (selectedCat) {
+                // בדיקה אם הקטגוריה של השורה מתחילה בקטגוריה הנבחרת
+                // זה יכלול את הקטגוריה עצמה ואת כל תתי-הקטגוריות
+                const isMatch = categoryCell === selectedCat.full_path || 
+                               categoryCell.startsWith(selectedCat.full_path + ' >');
+                if (!isMatch) {
+                    show = false;
+                }
+            }
+        }
+        
+        // סינון לפי תזרים
+        if (flow) {
+            const flowCell = row.cells[5]?.textContent.trim();
+            const selectedFlow = allFlows.find(f => f.id == flow);
+            if (selectedFlow && flowCell !== selectedFlow.name) {
+                show = false;
+            }
+        }
+        
+        // סינון לפי חשבון
+        if (account) {
+            const accountCell = row.cells[5]?.textContent.trim();
+            if (accountCell !== account) show = false;
+        }
+        
+        // סינון לפי סכום
+        const amountCell = row.cells[3]?.textContent.trim();
+        if (amountCell) {
+            const amount = parseFloat(amountCell.replace(/[^\d.-]/g, ''));
+            if (Math.abs(amount) < amountMin || Math.abs(amount) > amountMax) {
+                show = false;
+            }
+        }
+        
+        // סינון לפי חיפוש חופשי
+        if (searchText) {
+            const descCell = row.cells[2]?.textContent.toLowerCase();
+            if (!descCell || !descCell.includes(searchText)) {
+                show = false;
+            }
+        }
+        
+        // הצגה/הסתרה
+        if (show) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    console.log(`מציג ${visibleCount} מתוך ${rows.length} רשומות`);
+}
+
+// ניקוי סינון
+window.clearFilters = function() {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterCategory').value = '';
+    document.getElementById('filterFlow').value = '';
+    document.getElementById('filterAccount').value = '';
+    document.getElementById('filterAmountMin').value = '';
+    document.getElementById('filterAmountMax').value = '';
+    document.getElementById('filterSearch').value = '';
+    
+    // הצגת כל השורות
+    document.querySelectorAll('table tbody tr').forEach(row => {
+        row.style.display = '';
+    });
+}
+
+// המרת תאריך מפורמט ישראלי (DD/MM/YYYY) ל-ISO (YYYY-MM-DD)
+function convertDateToISO(dateStr) {
+    // בהנחה שהתאריך בפורמט YYYY-MM-DD כבר
+    // אם הוא בפורמט DD/MM/YYYY צריך להמיר
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+    }
+    return dateStr;
+}
+</script>
+{% endblock %}

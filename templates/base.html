@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ניהול כספים{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=5">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- תפריט ניווט עליון -->
+    <nav class="navbar">
+        <div class="container">
+            <ul class="nav-menu">
+                <li><a href="/" class="{% if request.endpoint == 'home' %}active{% endif %}">
+                    בית
+                </a></li>
+                <li><a href="/files" class="{% if request.endpoint and 'files' in request.endpoint %}active{% endif %}">
+                    קבצים
+                </a></li>
+                <li><a href="/accounts" class="{% if request.endpoint and 'accounts' in request.endpoint %}active{% endif %}">
+                    חשבונות
+                </a></li>
+                <li><a href="/flows" class="{% if request.endpoint and 'flows' in request.endpoint %}active{% endif %}">
+                    תזרימים
+                </a></li>
+                <li><a href="/categories" class="{% if request.endpoint and 'categories' in request.endpoint %}active{% endif %}">
+                    קטגוריות
+                </a></li>
+                <li><a href="/transactions" class="{% if request.endpoint and 'transactions' in request.endpoint %}active{% endif %}">
+                    רשומות
+                </a></li>
+                <li><a href="/database" class="{% if request.endpoint and 'database' in request.endpoint %}active{% endif %}">
+                    DB
+                </a></li>
+            </ul>
+            <div class="nav-brand">
+                <h1>MyCashFlow Pro</h1>
+            </div>
+        </div>
+    </nav>
+
+    <!-- תוכן ראשי -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- פוטר -->
+    <footer>
+        <div class="container">
+            <p>© 2025 מערכת ניהול כספים | Milestone 1 - תשתית בסיסית</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}טבלאות מסד נתונים - ניהול כספים{% endblock %}
+
+{% block content %}
+<div class="database-page">
+    <div class="page-header">
+        <h2>🗄️ טבלאות מסד הנתונים</h2>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">
+        <strong>שגיאה:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- סטטיסטיקות מסד נתונים -->
+    <div class="db-stats-section">
+        <p class="db-description">צפייה בכל הטבלאות והנתונים</p>
+        <div class="stats-grid-compact">
+            <div class="stat-card-compact">
+                <div class="stat-number">{{ tables|length }}</div>
+                <div class="stat-label">טבלאות</div>
+            </div>
+            <div class="stat-card-compact">
+                <div class="stat-number">{{ db_size_kb }}</div>
+                <div class="stat-label">גודל (KB)</div>
+            </div>
+            <div class="stat-card-compact">
+                <div class="stat-number">{{ total_records }}</div>
+                <div class="stat-label">סה"כ רשומות</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- רשימת טבלאות -->
+    <div class="tables-section">
+        <div class="db-header-actions">
+            <h3>טבלאות במערכת ({{ tables|length }})</h3>
+            <div class="button-group">
+                <button onclick="expandAll()" class="btn btn-secondary btn-small">
+                    📂 הרחב הכל
+                </button>
+                <button onclick="collapseAll()" class="btn btn-secondary btn-small">
+                    📁 כווץ הכל
+                </button>
+            </div>
+        </div>
+        
+        <div class="tables-grid">
+            {% for table_name, table_info in tables.items() %}
+            <div class="table-card" id="table-{{ table_name }}">
+                <div class="table-card-header" data-table="{{ table_name }}" onclick="toggleTable('{{ table_name }}')" style="cursor: pointer;">
+                    <div class="table-title">
+                        <span class="table-icon">📁</span>
+                        <h4>{{ table_name }}</h4>
+                    </div>
+                    <div class="table-meta">
+                        <span class="table-count">{{ table_info.count }} רשומות</span>
+                        <span class="expand-icon" id="icon-{{ table_name }}">▼</span>
+                    </div>
+                </div>
+                
+                <div class="table-card-body collapsed" id="body-{{ table_name }}">
+                    {% if table_info.description %}
+                    <p class="table-description">{{ table_info.description }}</p>
+                    {% endif %}
+                    
+                    <div class="table-columns">
+                        <h5>עמודות ({{ table_info.columns|length }}):</h5>
+                        <ul class="columns-list">
+                            {% for col in table_info.columns %}
+                            <li>
+                                <span class="col-name">{{ col.name }}</span>
+                                <span class="col-type">{{ col.type }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    {% if table_info.sample_data and table_info.sample_data|length > 0 %}
+                    <div class="table-sample">
+                        <h5>נתוני דוגמה (עד 5 שורות):</h5>
+                        <div class="table-scroll">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        {% for col in table_info.columns %}
+                                        <th>{{ col.name }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in table_info.sample_data %}
+                                    <tr>
+                                        {% for value in row %}
+                                        <td>{{ value if value is not none else '-' }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="no-data">אין נתונים בטבלה זו</p>
+                    {% endif %}
+                    
+                    <div class="table-actions">
+                        <button class="btn-small btn-view" onclick="viewFullTable('{{ table_name }}')">
+                            👁️ צפייה בכל הנתונים
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- מפת הקשרים -->
+    <div class="relationships-section">
+        <h3>🔗 מפת קשרים בין טבלאות</h3>
+        <div class="relationships-box">
+            <div class="relationship-item">
+                <strong>flows</strong> → מחובר ל: accounts, transactions, files
+            </div>
+            <div class="relationship-item">
+                <strong>categories</strong> → מחובר ל: transactions, bank_category_mappings, learning_rules
+            </div>
+            <div class="relationship-item">
+                <strong>accounts</strong> → מחובר ל: transactions, reconciliations
+            </div>
+            <div class="relationship-item">
+                <strong>transactions</strong> → מחובר ל: transaction_links, reconciliations, custom_field_values
+            </div>
+            <div class="relationship-item">
+                <strong>files</strong> → מחובר ל: transactions, import_sessions
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleTable(tableName) {
+    const body = document.getElementById('body-' + tableName);
+    const icon = document.getElementById('icon-' + tableName);
+    
+    if (!body || !icon) return;
+    
+    if (body.classList.contains('collapsed')) {
+        body.classList.remove('collapsed');
+        icon.textContent = '▲';
+    } else {
+        body.classList.add('collapsed');
+        icon.textContent = '▼';
+    }
+}
+
+function viewFullTable(tableName) {
+    // פותח דף חדש עם כל הנתונים של הטבלה
+    window.open(`/database/table/${tableName}`, '_blank');
+}
+
+function expandAll() {
+    const tables = {{ tables.keys()|list|tojson }};
+    tables.forEach(tableName => {
+        const body = document.getElementById('body-' + tableName);
+        const icon = document.getElementById('icon-' + tableName);
+        if (body && icon) {
+            body.classList.remove('collapsed');
+            icon.textContent = '▲';
+        }
+    });
+}
+
+function collapseAll() {
+    const tables = {{ tables.keys()|list|tojson }};
+    tables.forEach(tableName => {
+        const body = document.getElementById('body-' + tableName);
+        const icon = document.getElementById('icon-' + tableName);
+        if (body && icon) {
+            body.classList.add('collapsed');
+            icon.textContent = '▼';
+        }
+    });
+}
+</script>
+{% endblock %}

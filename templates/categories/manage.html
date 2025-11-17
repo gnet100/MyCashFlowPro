@@ -1,0 +1,1102 @@
+{% extends "base.html" %}
+
+{% block title %}ניהול קטגוריות - ניהול כספים{% endblock %}
+
+{# מאקרו לעץ רקורסיבי - חייב להיות לפני השימוש #}
+{% macro render_tree_item(category) %}
+<div class="tree-item level-{{ category.level }}" 
+     data-id="{{ category.id }}" 
+     data-name="{{ category.name }}" 
+     data-parent-id="{{ category.parent_id or '' }}"
+     tabindex="0">
+    <div class="tree-item-header">
+        <div class="tree-item-name">
+            {% if category.level == 2 %}
+            <span class="level-indicator">●</span>
+            {% elif category.level == 3 %}
+            <span class="level-indicator">●●</span>
+            {% endif %}
+            {{ category.name }}
+        </div>
+        <div class="tree-item-stats">
+            <span class="tree-item-count-plain">{{ category.transaction_count }} רשומות</span>
+            {% if category.flow_name %}
+            <span class="tree-item-flow">תזרים: {{ category.flow_name }}</span>
+            {% else %}
+            <span class="tree-item-flow">תזרים: לא משויך</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- טופס עריכה inline -->
+    <div class="tree-item-edit-form" id="edit-form-{{ category.id }}" style="display: none;">
+        <div class="edit-form-content">
+            <div class="form-row-single">
+                <div class="form-field-compact">
+                    <label>שם:</label>
+                    <input type="text" class="edit-input-name" value="{{ category.name }}" />
+                </div>
+                <div class="form-field-compact">
+                    <label>תזרים:</label>
+                    <select class="edit-input-flow">
+                        <option value="0" {% if category.flow_id == 0 %}selected{% endif %}>⚪ ללא סיווג</option>
+                        <option value="1" {% if category.flow_id == 1 %}selected{% endif %}>🏠 בית</option>
+                        <option value="2" {% if category.flow_id == 2 %}selected{% endif %}>💼 עסק</option>
+                        <option value="3" {% if category.flow_id == 3 %}selected{% endif %}>📈 השקעות</option>
+                    </select>
+                </div>
+                <div class="form-field-compact">
+                    <label>קטגוריית אב:</label>
+                    <select class="edit-input-parent">
+                        <option value="">--- אין ---</option>
+                        {% for cat in categories %}
+                            {% if cat.level <= 2 and cat.id != category.id %}
+                            <option value="{{ cat.id }}" {% if cat.id == category.parent_id %}selected{% endif %}>{{ cat.full_path }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field-compact">
+                    <label>תיאור חיצוני:</label>
+                    <input type="text" class="edit-input-external" placeholder="עבור" />
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-danger btn-small" onclick="deleteCategory({{ category.id }})">מחיקת קטגוריה</button>
+                <button class="btn btn-secondary btn-small" onclick="cancelInlineEdit({{ category.id }})">ביטול</button>
+                <button class="btn btn-primary btn-small" onclick="saveInlineEdit({{ category.id }})">שמירה</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if category.children %}
+    {% for child in category.children %}
+        {{ render_tree_item(child) }}
+    {% endfor %}
+{% endif %}
+{% endmacro %}
+
+{% block extra_css %}
+<style>
+/* עיצוב עץ קטגוריות */
+.category-tree {
+    background: var(--white);
+    padding: 0;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+/* שורת כותרת הטבלה */
+.category-tree-header {
+    background: var(--light-gray);
+    padding: 1rem 1.5rem;
+    border-bottom: 2px solid var(--medium-gray);
+    display: flex;
+    justify-content: flex-start; /* שמאל ב-RTL */
+    align-items: center;
+    gap: 1rem;
+}
+
+.category-tree-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--dark-gray);
+}
+
+.category-tree-header-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.tree-item {
+    margin: 0;
+    padding: 0.35rem 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: var(--white);
+    transition: background-color 0.2s;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    line-height: 1.3;
+}
+
+.tree-item:hover {
+    background: #f8fbff;
+}
+
+.tree-item:focus,
+.tree-item.focused {
+    background: #f0f7ff !important;
+    outline: none;
+}
+
+.tree-item.level-1 {
+    font-weight: 600;
+    color: #006064;
+}
+
+.tree-item.level-2 {
+    padding-right: 4rem;
+    color: #37474f;
+}
+
+.tree-item.level-3 {
+    padding-right: 6rem;
+    color: #546e7a;
+}
+
+.level-indicator {
+    margin-left: 0.5rem;
+    color: #888888;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.tree-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tree-item-name {
+    font-size: 1rem;
+    flex: 1;
+}
+
+.tree-item-stats {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.tree-item-flow {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.tree-item-count-plain {
+    color: var(--secondary-color);
+}
+
+.tree-item-count {
+    background: rgba(0, 172, 193, 0.15);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    color: inherit;
+}
+
+/* הסרת עיצובים ישנים */
+.expand-icon,
+.tree-children,
+.tree-children.collapsed {
+    display: none !important;
+}
+
+/* טפסים */
+.category-form {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+}
+
+.form-group select {
+    appearance: auto;
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-secondary {
+    background: #7092BE;
+    color: var(--white);
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #5D799E;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-danger {
+    background: var(--error-color);
+    color: var(--white);
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-warning {
+    background: var(--warning-color);
+    color: var(--dark-gray);
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+/* סטטיסטיקות */
+.cat-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.cat-stat-card {
+    background: #f5f5f5;
+    color: #424242;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    border-left: 4px solid #9e9e9e;
+}
+
+.cat-stat-card.green {
+    background: #f5f5f5;
+    color: #424242;
+    border-left-color: #9e9e9e;
+}
+
+.cat-stat-card.orange {
+    background: #f5f5f5;
+    color: #424242;
+    border-left-color: #9e9e9e;
+}
+
+.cat-stat-card.blue {
+    background: #f5f5f5;
+    color: #424242;
+    border-left-color: #9e9e9e;
+}
+
+.cat-stat-number {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.cat-stat-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+/* טופס עריכה inline */
+.tree-item-edit-form {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-top: 2px solid #00acc1;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+}
+
+.edit-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-row-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-row-single {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 200px));
+    gap: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.form-field-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-field label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.85rem;
+}
+
+.form-field-compact label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.form-field input,
+.form-field select {
+    padding: 0.4rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.form-field-compact input,
+.form-field-compact select {
+    padding: 0.35rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.form-row label {
+    min-width: 120px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-row input,
+.form-row select {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    justify-content: flex-end; /* שמאל (מערב) ב-RTL */
+}
+
+.btn-small {
+    padding: 0.4rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* מודל */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--secondary-color);
+}
+
+.modal-close:hover {
+    color: var(--error-color);
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="categories-page">
+    <div class="page-header">
+        <h2>🗂️ ניהול קטגוריות</h2>
+        <p class="page-subtitle">ארגון הקטגוריות בהיררכיה של 3 רמות</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">
+        <strong>שגיאה:</strong> {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- סטטיסטיקות -->
+    <div class="cat-stats-grid">
+        <div class="cat-stat-card" onclick="filterAllCategories(this)" style="cursor: pointer;">
+            <div class="cat-stat-number">{{ stats.total if stats else 0 }}</div>
+            <div class="cat-stat-label">סה"כ קטגוריות</div>
+            <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">לחץ לצפייה</div>
+        </div>
+        <div class="cat-stat-card green" onclick="filterInUseCategories(this)" style="cursor: pointer;">
+            <div class="cat-stat-number">{{ stats.in_use if stats else 0 }}</div>
+            <div class="cat-stat-label">בשימוש</div>
+            <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">לחץ לצפייה</div>
+        </div>
+        <div class="cat-stat-card orange" onclick="filterUnassignedToFlow(this)" style="cursor: pointer;">
+            <div class="cat-stat-number">{{ stats.unassigned_to_flow if stats else 0 }}</div>
+            <div class="cat-stat-label">ללא סיווג</div>
+            <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">לחץ לצפייה</div>
+        </div>
+        <div class="cat-stat-card blue" onclick="filterTopLevelCategories(this)" style="cursor: pointer;">
+            <div class="cat-stat-number">{{ stats.by_level.get(1, 0) if stats.by_level else 0 }}</div>
+            <div class="cat-stat-label">קטגוריות ראשיות</div>
+            <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.5rem;">לחץ לצפייה</div>
+        </div>
+    </div>
+
+    <!-- עץ קטגוריות -->
+    <div class="category-tree" id="categoryTree">
+        <!-- שורת כותרת עם כפתורים -->
+        <div class="category-tree-header">
+            <h3>רשימת קטגוריות</h3>
+            <div class="category-tree-header-actions">
+                <button onclick="showAddModal()" class="btn btn-primary btn-small">
+                    הוספת קטגוריה חדשה
+                </button>
+                <button onclick="editSelectedCategory()" class="btn btn-secondary btn-small">
+                    עריכה
+                </button>
+            </div>
+        </div>
+        
+        <!-- רשימת הקטגוריות -->
+        <div class="category-tree-body">
+            {% if tree %}
+                {% for category in tree %}
+                    {{ render_tree_item(category) }}
+                {% endfor %}
+            {% else %}
+                <p class="no-data" style="padding: 2rem; text-align: center;">אין קטגוריות במערכת</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- מודל הוספה/עריכה -->
+<div id="categoryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">הוספת קטגוריה</h3>
+            <button class="modal-close" onclick="closeModal()">✖</button>
+        </div>
+        <form id="categoryForm" onsubmit="return false;">
+            <input type="hidden" id="categoryId" value="">
+            
+            <div class="form-group">
+                <label for="categoryName">שם הקטגוריה *</label>
+                <input type="text" id="categoryName" required placeholder="לדוגמה: מזון, תחבורה, בית">
+            </div>
+            
+            <div class="form-group">
+                <label for="flowId">תזרים *</label>
+                <select id="flowId" style="min-height: 40px;" required>
+                    <option value="">בחר תזרים...</option>
+                    <option value="0">⚪ ללא סיווג</option>
+                    <option value="1">🏠 בית</option>
+                    <option value="2">💼 עסק</option>
+                    <option value="3">📈 השקעות</option>
+                </select>
+                <small style="color: #666; margin-top: 0.25rem; display: block;">
+                    בחר את התזרים שאליו שייכת הקטגוריה
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="parentCategory">קטגוריית אב (אופציונלי)</label>
+                <select id="parentCategory" style="min-height: 40px;">
+                    <option value="">--- קטגוריה ראשית ---</option>
+                    {% for cat in categories %}
+                        {% if cat.level <= 2 %}
+                        <option value="{{ cat.id }}">{{ cat.full_path }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <small style="color: #666; margin-top: 0.25rem; display: block;">
+                    בחר קטגוריית אב אם זו תת-קטגוריה
+                </small>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" onclick="saveCategory()" class="btn btn-primary">
+                    שמור
+                </button>
+                <button type="button" onclick="closeModal()" class="btn btn-secondary">
+                    ביטול
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// מצב עריכה
+let editMode = false;
+let editingId = null;
+
+// הצגת מודל הוספה
+function showAddModal() {
+    editMode = false;
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'הוספת קטגוריה חדשה';
+    document.getElementById('categoryId').value = '';
+    document.getElementById('categoryName').value = '';
+    document.getElementById('parentCategory').value = '';
+    document.getElementById('flowId').value = '';
+    document.getElementById('categoryModal').classList.add('active');
+    
+    // מיקוד בשדה השם
+    setTimeout(() => {
+        document.getElementById('categoryName').focus();
+    }, 100);
+}
+
+// סגירת מודל
+function closeModal() {
+    document.getElementById('categoryModal').classList.remove('active');
+}
+
+// שמירת קטגוריה - תיקון בעיית ENTER
+async function saveCategory() {
+    const id = document.getElementById('categoryId').value;
+    const name = document.getElementById('categoryName').value.trim();
+    let parentId = document.getElementById('parentCategory').value;
+    let flowId = document.getElementById('flowId').value;
+    
+    // טיפול נכון ב-parentId ריק
+    if (parentId === '' || parentId === 'null') {
+        parentId = null;
+    }
+    
+    // טיפול נכון ב-flowId
+    if (flowId === '' || flowId === 'null') {
+        flowId = null;
+    }
+    
+    // סדר בדיקות: 1) שם ריק 2) שם כפול (בשרת) 3) תזרים (בשרת)
+    if (!name) {
+        alert('שם קטגוריה חובה');
+        return;
+    }
+    
+    // הוספת אינדיקציה שהשמירה מתבצעת
+    const saveBtn = document.querySelector('#categoryModal .btn-primary');
+    const originalText = saveBtn ? saveBtn.textContent : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'שומר...';
+    }
+    
+    try {
+        let response;
+        if (editMode && id) {
+            // עדכון - כולל parent_id ו-flow_id
+            console.log('Updating category:', { name, parent_id: parentId, flow_id: flowId });
+            response = await fetch(`/categories/api/update/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, parent_id: parentId, flow_id: flowId })
+            });
+        } else {
+            // הוספה
+            console.log('Sending data:', { name, parent_id: parentId, flow_id: flowId });
+            response = await fetch('/categories/api/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, parent_id: parentId, flow_id: flowId })
+            });
+        }
+        
+        // קריאת התשובה כ-JSON (גם במקרה של שגיאה)
+        const data = await response.json();
+        console.log('Server response:', data);
+        
+        if (response.ok && data.success) {
+            // עדכון מוצלח - טוען מחדש בשקט
+            closeModal();
+            window.location.reload();
+        } else {
+            // הצגת הודעת השגיאה מהשרת
+            alert(data.error || 'שגיאה לא ידועה');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+    } catch (error) {
+        console.error('Error in saveCategory:', error);
+        alert('שגיאה בשמירה: ' + error.message);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+        }
+    }
+}
+
+// עריכת קטגוריה נבחרת - חדש!
+function editSelectedCategory() {
+    const focused = document.querySelector('.tree-item.focused');
+    if (!focused) {
+        alert('אנא בחר קטגוריה לעריכה על ידי לחיצה עליה');
+        return;
+    }
+    
+    const categoryId = focused.getAttribute('data-id');
+    if (categoryId) {
+        editCategory(categoryId);
+    }
+}
+
+// עריכת קטגוריה
+async function editCategory(id) {
+    try {
+        const response = await fetch(`/categories/api/get/${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            editMode = true;
+            editingId = id;
+            const cat = data.category;
+            
+            document.getElementById('modalTitle').textContent = 'עריכת קטגוריה';
+            document.getElementById('categoryId').value = cat.id;
+            document.getElementById('categoryName').value = cat.name;
+            document.getElementById('parentCategory').value = cat.parent_id || '';
+            document.getElementById('flowId').value = cat.flow_id !== null && cat.flow_id !== undefined ? cat.flow_id : '';
+            document.getElementById('categoryModal').classList.add('active');
+            
+            // מיקוד בשדה השם
+            setTimeout(() => {
+                document.getElementById('categoryName').focus();
+            }, 100);
+        } else {
+            alert('שגיאה: ' + data.error);
+        }
+    } catch (error) {
+        alert('שגיאה בטעינה: ' + error);
+    }
+}
+
+// מחיקת קטגוריה
+async function deleteCategory(id) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק קטגוריה זו?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/categories/api/delete/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            // מחיקה מוצלחת - טוען מחדש בשקט
+            window.location.reload();
+        } else {
+            alert('שגיאה: ' + data.error);
+        }
+    } catch (error) {
+        alert('שגיאה במחיקה: ' + error);
+    }
+}
+
+// סגירת מודל בלחיצה מחוץ לתוכן
+window.onclick = function(event) {
+    const modal = document.getElementById('categoryModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// אתחול מאזינים
+document.addEventListener('DOMContentLoaded', function() {
+    // הוספת האזנה למקש ENTER במודל הקטגוריות - תיקון!
+    const modal = document.getElementById('categoryModal');
+    if (modal) {
+        modal.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                const modalDisplay = window.getComputedStyle(modal).display;
+                if (modalDisplay === 'flex') {
+                    saveCategory();
+                }
+            }
+        });
+    }
+    
+    // הוספת מאזינים לדאבל קליק ומיקוד
+    setupInlineEditListeners();
+});
+
+// מצב עריכה
+let currentEditingId = null;
+
+// הוספת מאזינים לדאבל קליק ומיקוד
+function setupInlineEditListeners() {
+    document.querySelectorAll('.tree-item').forEach(item => {
+        const header = item.querySelector('.tree-item-header');
+        if (header) {
+            // דאבל קליק - פתיחה או סגירה
+            header.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                const categoryId = item.getAttribute('data-id');
+                const editForm = document.getElementById('edit-form-' + categoryId);
+                
+                // אם פתוח - סוגר, אחרת - פותח
+                if (editForm && editForm.style.display === 'block') {
+                    cancelInlineEdit(categoryId);
+                } else {
+                    openInlineEdit(categoryId);
+                }
+            });
+            
+            // קליק רגיל - מיקוד
+            item.addEventListener('click', function(e) {
+                // רק אם זה לא על כפתור
+                if (!e.target.closest('button')) {
+                    setFocus(item);
+                }
+            });
+        }
+    });
+    
+    // קליק מחוץ לטופס - סוגר את הטופס
+    document.addEventListener('click', function(e) {
+        // אם הקליק לא היה בתוך tree-item או בתוך edit-form
+        if (!e.target.closest('.tree-item')) {
+            closeAllEditForms();
+        }
+    });
+}
+
+// מיקוד על שורה
+function setFocus(item) {
+    // הסרת מיקוד מכל השורות
+    document.querySelectorAll('.tree-item').forEach(i => {
+        i.classList.remove('focused');
+    });
+    
+    // הוספת מיקוד לשורה הנוכחית
+    item.classList.add('focused');
+}
+
+// פתיחת טופס עריכה inline
+function openInlineEdit(categoryId) {
+    // סגירת טפסים פתוחים אחרים
+    closeAllEditForms();
+    
+    // פתיחת הטופס הנוכחי
+    const form = document.getElementById('edit-form-' + categoryId);
+    if (form) {
+        form.style.display = 'block';
+        currentEditingId = categoryId;
+        
+        // מיקוד בשדה הראשון
+        const firstInput = form.querySelector('.edit-input-name');
+        if (firstInput) {
+            firstInput.focus();
+            firstInput.select();
+        }
+        
+        // הוספת מאזין ל-ENTER בטופס עריכה
+        form.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                saveInlineEdit(categoryId);
+            }
+        });
+    }
+}
+
+// סגירת כל טפסי העריכה
+function closeAllEditForms() {
+    document.querySelectorAll('.tree-item-edit-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    currentEditingId = null;
+}
+
+// שמירת עריכה inline - עם תמיכה ב-ENTER
+async function saveInlineEdit(categoryId) {
+    const form = document.getElementById('edit-form-' + categoryId);
+    if (!form) return;
+    
+    const name = form.querySelector('.edit-input-name').value.trim();
+    let parentId = form.querySelector('.edit-input-parent').value;
+    let flowId = form.querySelector('.edit-input-flow').value;
+    
+    // טיפול נכון ב-parentId ריק
+    if (parentId === '' || parentId === 'null') {
+        parentId = null;
+    }
+    
+    // טיפול נכון ב-flowId ריק
+    if (flowId === '' || flowId === 'null') {
+        flowId = null;
+    }
+    
+    if (!name) {
+        alert('שם קטגוריה חובה');
+        return;
+    }
+    
+    if (!flowId && flowId !== 0) {
+        alert('יש לבחור תזרים');
+        return;
+    }
+    
+    try {
+        console.log('Updating category:', { id: categoryId, name, parent_id: parentId, flow_id: flowId });
+        
+        const response = await fetch(`/categories/api/update/${categoryId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, parent_id: parentId, flow_id: flowId })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error:', errorText);
+            throw new Error(`שגיאת שרת: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Server response:', data);
+        
+        if (data.success) {
+            // עדכון מוצלח - טוען מחדש
+            window.location.reload();
+        } else {
+            alert('שגיאה: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error in saveInlineEdit:', error);
+        alert('שגיאה בשמירה: ' + error.message);
+    }
+}
+
+// ביטול עריכה inline
+function cancelInlineEdit(categoryId) {
+    const form = document.getElementById('edit-form-' + categoryId);
+    if (form) {
+        // איפוס הערכים המקוריים
+        const item = document.querySelector(`.tree-item[data-id="${categoryId}"]`);
+        if (item) {
+            const originalName = item.getAttribute('data-name');
+            const originalParentId = item.getAttribute('data-parent-id');
+            
+            form.querySelector('.edit-input-name').value = originalName;
+            form.querySelector('.edit-input-parent').value = originalParentId;
+        }
+        
+        // סגירת הטופס
+        form.style.display = 'none';
+    }
+    
+    currentEditingId = null;
+}
+
+// פונקציות נוספות...
+// קליק מחוץ לטופס - סוגר את העריכה
+document.addEventListener('click', function(e) {
+    // אם יש טופס פתוח
+    if (currentEditingId) {
+        const form = document.getElementById('edit-form-' + currentEditingId);
+        const item = document.querySelector(`.tree-item[data-id="${currentEditingId}"]`);
+        
+        // אם הקליק לא בתוך הטופס או השורה
+        if (form && item && !form.contains(e.target) && !item.contains(e.target)) {
+            cancelInlineEdit(currentEditingId);
+        }
+    }
+});
+
+// פונקציות סינון לפי כרטיסים
+let currentFilter = 'all'; // מצב הסינון הנוכחי
+
+function clearActiveCards() {
+    // הסרת הדגשה מכל הכרטיסים
+    document.querySelectorAll('.cat-stat-card').forEach(card => {
+        card.style.border = '';
+        card.style.boxShadow = '';
+        card.style.transform = '';
+    });
+}
+
+function highlightCard(card) {
+    // הדגשת הכרטיס הנבחר
+    card.style.border = '3px solid #4A90E2';
+    card.style.boxShadow = '0 6px 16px rgba(74, 144, 226, 0.3)';
+    card.style.transform = 'translateY(-2px)';
+}
+
+function filterAllCategories(card) {
+    clearActiveCards();
+    highlightCard(card);
+    currentFilter = 'all';
+    
+    // הצגת כל הקטגוריות
+    document.querySelectorAll('.tree-item').forEach(item => {
+        item.style.display = 'block';
+        item.style.background = '';
+    });
+}
+
+function filterInUseCategories(card) {
+    clearActiveCards();
+    highlightCard(card);
+    currentFilter = 'in_use';
+    
+    let foundAny = false;
+    document.querySelectorAll('.tree-item').forEach(item => {
+        const countElement = item.querySelector('.tree-item-count');
+        if (countElement) {
+            const countText = countElement.textContent;
+            const count = parseInt(countText.match(/\d+/)?.[0] || '0');
+            
+            if (count > 0) {
+                item.style.display = 'block';
+                item.style.background = '#e8f5e9'; // ירוק בהיר
+                foundAny = true;
+            } else {
+                item.style.display = 'none';
+            }
+        }
+    });
+    
+    if (!foundAny) {
+        alert('לא נמצאו קטגוריות בשימוש');
+        filterAllCategories(document.querySelector('.cat-stat-card'));
+    }
+}
+
+function filterUnassignedToFlow(card) {
+    clearActiveCards();
+    highlightCard(card);
+    currentFilter = 'unassigned';
+    
+    let foundAny = false;
+    document.querySelectorAll('.tree-item').forEach(item => {
+        const flowIcon = item.querySelector('.tree-item-name span[style*="opacity"]');
+        // בדיקה אם אין אייקון תזרים או שהאייקון הוא ⚪
+        if (!flowIcon || flowIcon.textContent.includes('⚪')) {
+            item.style.display = 'block';
+            item.style.background = '#fff3cd'; // צהוב בהיר
+            foundAny = true;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    if (!foundAny) {
+        alert('לא נמצאו קטגוריות ללא סיווג');
+        filterAllCategories(document.querySelector('.cat-stat-card'));
+    }
+}
+
+function filterTopLevelCategories(card) {
+    clearActiveCards();
+    highlightCard(card);
+    currentFilter = 'top_level';
+    
+    let foundAny = false;
+    document.querySelectorAll('.tree-item').forEach(item => {
+        // בדיקה אם זו קטגוריה ברמה 1 (קטגוריה ראשית)
+        if (item.classList.contains('level-1')) {
+            item.style.display = 'block';
+            item.style.background = '#e3f2fd'; // כחול בהיר
+            foundAny = true;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    if (!foundAny) {
+        alert('לא נמצאו קטגוריות ראשיות');
+        filterAllCategories(document.querySelector('.cat-stat-card'));
+    }
+}
+
+function resetFilter() {
+    const firstCard = document.querySelector('.cat-stat-card');
+    if (firstCard) {
+        filterAllCategories(firstCard);
+    }
+}
+
+</script>
+{% endblock %}
